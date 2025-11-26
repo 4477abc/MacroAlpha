@@ -52,7 +52,6 @@ To ensure our database application simulates a real-world, institutional-grade e
 **Goal:** To simulate the impact of rising interest rates on corporate balance sheets and identify "Zombie Companies" at risk of bankruptcy.
 * **Query 1 (Conditional Logic):** Identify "Zombie Companies": Select companies where the "Interest Coverage Ratio" (EBITDA / Interest Expense) has been less than 1.5 for 3 consecutive years, specifically in countries with declining GDP growth.
 * **Query 2 (Simulation/Projection):** **Scenario Analysis:** Calculate the hypothetical `Net_Income` for all companies if the `Reference_Interest_Rate` (10-Year Treasury Yield) increases by 200 basis points (2%), assuming floating-rate debt costs rise proportionally.
-* **Query 3 (Complex Scoring):** Compute the **Altman Z-Score** (a bankruptcy prediction formula using 5 financial ratios) for all Industrial companies and rank them by credit risk.
 
 ### Use Case 4: Cyclical vs. Defensive Sector Rotation
 **Goal:** To analyze the time-lag relationship between macroeconomic cycles and specific industry performance to guide investment rotation.
