@@ -17,7 +17,6 @@ The application will require a robust schema to handle data with different granu
 
 To ensure our database application simulates a real-world, institutional-grade environment, we have secured access to the **Bloomberg Terminal**, the gold standard for financial data integrity.
 
-### 1. Primary Source: Bloomberg Terminal (Proprietary)
 * **Description:** We will extract structured datasets using the Bloomberg Professional Service.
     * **Macro Data:** Function `<ECST>` (World Economic Statistics) for GDP, CPI, and Sovereign Yields across major economies (US, China, UK, DE, JP).
     * **Corporate Data:** Function `<EQS>` (Equity Screening) and `<FA>` (Financial Analysis) for standardized financial statements of S&P 500 and FTSE 100 constituents.
@@ -27,12 +26,6 @@ To ensure our database application simulates a real-world, institutional-grade e
 * **Accessibility & Reproducibility Strategy:**
     * To ensure the project is assessable without a Bloomberg license, we will perform a **static ETL (Extract-Transform-Load) process**.
     * We will export the query results from the terminal into cleaned **CSV flat files**. [cite_start]The final database submission will ingest these static files (consistent with the guideline allowing "data insertion from real datasets" [cite: 8]), allowing the grading team to reproduce all queries locally.
-
-### 2. Secondary/Validation Source: The World Bank Open Data
-* **Link:** [https://data.worldbank.org/](https://data.worldbank.org/)
-* **Role:** Used as a public benchmark to validate the macro-economic trends observed in our proprietary dataset and to fill gaps for smaller emerging markets where Bloomberg coverage might be sparse.
-
----
 
 ## Use Cases & Queries
 
