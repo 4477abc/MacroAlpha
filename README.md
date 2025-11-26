@@ -15,7 +15,7 @@ The application will require a robust schema to handle data with different granu
 
 ## Data Sources & Acquisition Strategy
 
-To ensure our database application simulates a real-world, institutional-grade environment, we have secured access to the **Bloomberg Terminal**, the gold standard for financial data integrity.
+To ensure our database application achieve an institutional-grade standard, we have secured access to the **Bloomberg Terminal**, the platform globally recongnized as gold standard for financial data quality adn integrity.
 
 * **Description:** We will extract structured datasets using the Bloomberg Professional Service.
     * **Macro Data:** Function `<ECST>` (World Economic Statistics) for GDP, CPI, and Sovereign Yields across major economies (US, China, UK, DE, JP).
