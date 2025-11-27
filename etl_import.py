@@ -277,7 +277,10 @@ def import_prices_weekly(conn, ticker_to_id):
 # ============================================================================
 
 def import_financials(conn, ticker_to_id, filename, period_type):
-    """Import financials Excel → financials table."""
+    """Import financials Excel → financials table.
+    
+    Note: Excel files should have complete dates in column A (run fix_dates.py first).
+    """
     print(f"\n💰 Importing financials ({period_type})...")
     
     df = pd.read_excel(DATA_DIR / filename, header=None)
@@ -285,11 +288,8 @@ def import_financials(conn, ticker_to_id, filename, period_type):
     # Structure:
     # Row 3: Tickers (every 7 columns)
     # Row 5: Field names (7 fields per ticker)
-    # Row 6+: Data (col 0 = date OR empty, col 1+ = values)
-    #
-    # IMPORTANT: Dates may be missing for later years!
-    # Row 6 = 2005, Row 7 = 2006, ..., Row 25 = 2024 (for annual)
-    # If date column is empty, infer from row index
+    # Row 6: Header "Dates"
+    # Row 7+: Data (col 0 = date, col 1+ = values)
     
     ticker_row = df.iloc[3]
     field_row = df.iloc[5]
@@ -329,43 +329,15 @@ def import_financials(conn, ticker_to_id, filename, period_type):
     cursor = conn.cursor()
     count = 0
     
-    # Determine date inference parameters based on period type
-    if period_type == 'ANNUAL':
-        base_year = 2005
-        base_row = 6
-        date_suffix = '-12-31'
-    else:  # QUARTERLY
-        # Quarterly: Row 6 = 2005-03-31, Row 7 = 2005-06-30, etc.
-        base_year = 2005
-        base_row = 6
-        quarters = ['03-31', '06-30', '09-30', '12-31']
-    
-    # Process data rows
+    # Process data rows (Excel row 7 = df.iloc[6], first data row is 2005)
+    # Excel row 6 is "Dates" header = df.iloc[5]
     for row_idx in range(6, len(df)):
-        # Try to get date from column 0
+        # Get date from column 0 (dates are now complete after fix_dates.py)
         date_val = df.iloc[row_idx, 0]
         period_end_date = parse_bloomberg_date(date_val)
         
-        # If date is missing, infer it
         if not period_end_date:
-            if period_type == 'ANNUAL':
-                inferred_year = base_year + (row_idx - base_row)
-                if inferred_year > 2024:
-                    continue
-                period_end_date = f"{inferred_year}{date_suffix}"
-            else:  # QUARTERLY
-                quarters_from_start = row_idx - base_row
-                inferred_year = base_year + (quarters_from_start // 4)
-                quarter_idx = quarters_from_start % 4
-                if inferred_year > 2024:
-                    continue
-                period_end_date = f"{inferred_year}-{quarters[quarter_idx]}"
-        
-        # Skip row 26+ (2025+ data is incomplete)
-        if period_type == 'ANNUAL' and row_idx > 25:
-            continue
-        if period_type == 'QUARTERLY' and row_idx > 85:  # ~20 years * 4 quarters
-            continue
+            continue  # Skip rows without valid dates
         
         for ticker, field_cols in ticker_fields.items():
             company_id = ticker_to_id.get(ticker)
