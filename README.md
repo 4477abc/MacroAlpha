@@ -85,8 +85,7 @@ Data extraction used Bloomberg's Spreadsheet Builder with Time Series Table form
   - `GROSS_PROFIT` (Gross Profit)
   - `ARD_COST_OF_GOODS_SOLD` (COGS)
 - **Frequency:** 
-  - Annual: Fiscal Annual
-  - Quarterly: Fiscal Quarterly
+  - Annual & Quarterly
 - **Date Range:** 2005-01-01 to 2024-12-31
 - **Export:** Save as separate Excel files (`financials_annual.xlsx`, `financials_quarterly.xlsx`)
 - **Note:** Financial companies (banks) may show N/A for EBITDA and Interest Coverage fields—this is expected and correct.
