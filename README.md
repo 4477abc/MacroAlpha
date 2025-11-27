@@ -36,13 +36,13 @@ Weekly closing prices and total returns for constituent equities. Weekly frequen
 
 #### 4) Corporate Financials
 Standardized income statement, balance sheet, and cash flow items extracted via Bloomberg Spreadsheet Builder:
-- **Revenue** (SALES_REV_TURN)
-- **EBITDA** (EBITDA)
-- **Interest Expense** (IS_INT_EXPENSE)
-- **Total Debt** (SHORT_AND_LONG_TERM_DEBT)
-- **Free Cash Flow** (CF_FREE_CASH_FLOW)
-- **Gross Profit** (GROSS_PROFIT) & **COGS** (ARD_COST_OF_GOODS_SOLD)
-- *Note: Ratios like Gross Margin and ROE are computed from these raw items.*
+- **Revenue** (`SALES_REV_TURN`) - Total sales after returns, allowances, discounts, and sales-based taxes
+- **EBITDA** (`EBITDA`) - Earnings Before Interest, Taxes, Depreciation, and Amortization
+- **Interest Expense** (`IS_INT_EXPENSE`) - Interest expense reported in income statement
+- **Total Debt** (`SHORT_AND_LONG_TERM_DEBT`) - Sum of short-term and long-term debt obligations
+- **Free Cash Flow** (`CF_FREE_CASH_FLOW`) - Operating cash flow minus capital spending
+- **Gross Profit** (`GROSS_PROFIT`) - Gross profit from operations
+- **COGS** (`ARD_COST_OF_GOODS_SOLD`) - Cost of Goods Sold from Annual Report Data (ARD = unadjusted company-reported figures)
 
 * Annual: [`financials_annual.xlsx`](https://github.com/4477abc/MacroAlpha/blob/main/financials_annual.xlsx) → `financials` table (period_type='ANNUAL')
 * Quarterly: [`financials_quarterly.xlsx`](https://github.com/4477abc/MacroAlpha/blob/main/financials_quarterly.xlsx) → `financials` table (period_type='QUARTERLY')
@@ -85,13 +85,13 @@ Data extraction used Bloomberg's Spreadsheet Builder with Time Series Table form
 - **Tool:** Spreadsheet Builder → `Time Series Table`
 - **Tickers:** Enter ticker list
 - **Fields:** Select the following fundamental data fields:
-  - `SALES_REV_TURN` (Revenue)
-  - `EBITDA` (EBITDA)
-  - `IS_INT_EXPENSE` (Interest Expense)
-  - `SHORT_AND_LONG_TERM_DEBT` (Total Debt)
-  - `CF_FREE_CASH_FLOW` (Free Cash Flow)
-  - `GROSS_PROFIT` (Gross Profit)
-  - `ARD_COST_OF_GOODS_SOLD` (COGS)
+  - `SALES_REV_TURN` (Revenue - total sales after adjustments)
+  - `EBITDA` (EBITDA - earnings before interest, taxes, depreciation, amortization)
+  - `IS_INT_EXPENSE` (Interest Expense - interest expense from income statement)
+  - `SHORT_AND_LONG_TERM_DEBT` (Total Debt - sum of short-term and long-term debt)
+  - `CF_FREE_CASH_FLOW` (Free Cash Flow - operating cash flow minus capital spending)
+  - `GROSS_PROFIT` (Gross Profit - gross profit from operations)
+  - `ARD_COST_OF_GOODS_SOLD` (COGS - Annual Report Data, company-reported unadjusted figures)
 - **Frequency:** 
   - Annual & Quarterly
 - **Date Range:** 2005-01-01 to 2024-12-31
@@ -110,7 +110,6 @@ Data extraction used Bloomberg's Spreadsheet Builder with Time Series Table form
 - **Frequency:** Monthly or Quarterly (depending on indicator)
 - **Date Range:** 2005-01-01 to 2024-12-31
 - **Export:** Save as separate Excel files per country (`usa_macros_2024~2005.xlsx`, etc.)
-- **Note:** Column headers show month names (Dec, Nov, Oct...) without years; dates are reconstructed from column position
 
 **5. Interest Rates**
 - **Tool:** Spreadsheet Builder → `Time Series Table`
@@ -148,7 +147,6 @@ Data extraction used Bloomberg's Spreadsheet Builder with Time Series Table form
 
 #### Data Quality Notes
 - Bloomberg may return `#N/A` or `--` for missing data points; these are handled as NULL in the database
-- Some date columns may be incomplete (especially in financials files); use `fix_dates.py` to populate missing dates
 - Wide-table format requires parsing logic to extract ticker-field pairs (see `etl_import.py`)
 
 All source data files are available in the project repository: [https://github.com/4477abc/MacroAlpha](https://github.com/4477abc/MacroAlpha)
