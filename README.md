@@ -63,6 +63,38 @@ We will export Bloomberg results to cleaned CSV files and ingest into the relati
 
 ---
 
+## Analytical Methodology: Sector-Specific Financial Metrics
+
+### Exclusion of Financial Sector from EBITDA-Based Analyses
+
+**Important Methodological Note:** Several Use Cases (UC2, UC3, UC4) explicitly exclude companies in the **Financials** sector (Banks, Insurance, Diversified Financials) from EBITDA-based and Interest Coverage analyses. This is **not** a data quality issue but a **correct analytical practice** reflecting fundamental differences in financial statement structures:
+
+| Metric | Non-Financial Companies | Financial Companies (Banks) |
+|--------|------------------------|----------------------------|
+| **EBITDA** | ✅ Applicable | ❌ Not applicable — Interest is core business, not financing cost |
+| **Interest Expense** | Debt servicing cost | Payment to depositors (normal operating cost) |
+| **Interest Coverage Ratio** | Measures debt serviceability | ❌ Meaningless — ratio < 1 is normal for banks |
+| **Debt-to-Equity** | 1.0 = high leverage | 10+ = normal (deposits are liabilities) |
+| **Free Cash Flow** | Operating CF minus CapEx | ❌ Concept inapplicable (is lending CapEx?) |
+
+**Why This Matters:**
+
+1. **Banks earn spread income:** Net Interest Income = Interest Received − Interest Paid. Interest expense is their cost of goods sold, not financing burden.
+2. **High leverage is structural:** Banks operate with D/E ratios of 10–15x because deposits (liabilities) fund their lending business.
+3. **Bloomberg correctly reports N/A:** For banks like JP Morgan, EBITDA and Interest Coverage fields are intentionally blank — these metrics are undefined for financial institutions.
+
+**Implementation in SQL:**
+```sql
+WHERE gics_sector_name != 'Financials'
+```
+
+This filter appears in queries involving EBITDA, Interest Coverage, and Free Cash Flow. It is the **industry-standard approach** used by rating agencies (Moody's, S&P), equity research, and academic studies when analyzing corporate leverage and solvency.
+
+**Alternative Metrics for Financials (Out of Scope):**
+Banks would require sector-specific metrics: Net Interest Margin (NIM), Non-Performing Loan Ratio (NPL), Tier 1 Capital Ratio, Loan-to-Deposit Ratio. These are not included in this project's scope but could be added as a future extension.
+
+---
+
 ## Core Schema Ideas (high level)
 
 * `Company(company_id, ticker, name, country_id, currency, gics_sub_industry_id, ...)`
@@ -96,6 +128,8 @@ We will export Bloomberg results to cleaned CSV files and ingest into the relati
 
 **Goal:** Analyze how corporate capital structure (leverage ratios) evolves across economic cycles, and identify companies whose debt burden creates vulnerability to rate shocks. This analysis does not require GICS sector classification, using data-driven groupings instead.
 
+**Scope:** Non-financial companies only (`WHERE gics_sector_name != 'Financials'`). See "Analytical Methodology" section for rationale.
+
 1. **Debt-to-Equity Ratio Distribution Evolution (2005–2024):**
    For each year, calculate the cross-sectional distribution of Debt-to-Equity ratios across all companies with available data. Compute key percentiles (P25, Median, P75, P90) using `PERCENTILE_CONT()`. Visualize how the distribution shifts during: (a) pre-2008 credit boom, (b) 2008–2009 deleveraging, (c) post-2010 recovery. Join with macro GDP growth to test: does leverage increase during expansions?
 
@@ -108,6 +142,8 @@ We will export Bloomberg results to cleaned CSV files and ingest into the relati
 ## Use Case 3: Rate-Shock Solvency Stress Test (Point-in-Time + Scenario)
 
 **Goal:** Measure rate sensitivity and identify "zombie companies" credibly through time. This analysis uses annual/quarterly financial statements + policy rate data; demonstrates scenario analysis and early warning signals.
+
+**Scope:** Non-financial companies only (`WHERE gics_sector_name != 'Financials'`). Interest Coverage Ratio is undefined for banks; they use different solvency metrics (Tier 1 Capital, NPL ratios).
 
 1. **Zombie Companies (3-Year Persistence) with Macro Constraint:**
    Identify companies with Interest Coverage Ratio (EBITDA / Interest Expense) < 1.5 for 3 consecutive years **and** located in countries with declining GDP growth trend (negative slope over 3-year window). Uses `LAG()` and `LEAD()` window functions to detect 3-year persistence. Join with macro GDP table to filter by country-level growth trend. Point-in-time membership ensures only "actively traded" companies at each date are analyzed.
@@ -122,6 +158,8 @@ We will export Bloomberg results to cleaned CSV files and ingest into the relati
 
 **Goal:** Test whether macro indicators lead corporate fundamentals with time lags, and classify companies by business cycle sensitivity using data-driven methods (without requiring GICS sector labels).
 
+**Scope:** Query 3 (Downturn Resilience) excludes financial companies due to FCF metric inapplicability. Queries 1–2 include all sectors.
+
 1. **Housing Starts Lead Revenue (2-Quarter Lag Test):**
    Use `LAG(housing_starts, 2) OVER (PARTITION BY country ORDER BY quarter)` to align lagged housing data with company revenue growth. Filter for companies with high "consumer durables" or "home improvement" exposure (identified via keywords in company name/description, or manually tagged subset). Test: does housing activity predict revenue with a 6-month lag? Requires cross-frequency join: quarterly macro → quarterly/annual financials.
 
@@ -131,15 +169,29 @@ We will export Bloomberg results to cleaned CSV files and ingest into the relati
 3. **Downturn Resilience (Cash Flow Focus):**
    Identify GDP contraction quarters (YoY GDP growth < 0). Within those quarters, list companies that maintained positive Free Cash Flow despite negative revenue growth. Compute "resilience rate" by country: (# of resilient firms) / (# of total firms with negative revenue). Compare: do US vs UK vs other markets show different resilience patterns? Demonstrates complex conditional logic and multi-table joins.
 
-## Use Case 5: FX Sensitivity & International Exposure (Hedging Need Identification)
+## Use Case 5: Sector Rotation & Inflation Regime Analysis
 
-**Goal:** Quantify FX risk and identify firms where foreign exchange fluctuations materially impact earnings. This analysis uses weekly price data + annual financial disclosures.
+**Goal:** Analyze how different GICS sectors perform across macroeconomic regimes (inflation environments, rate cycles), and identify sector rotation patterns that lead or lag macro indicators. This analysis uses weekly price data + GICS classification + macro indicators (CPI, policy rates).
 
-1. **FX-Return Sensitivity (Point-in-Time Members, Weekly Data):**
-   For multinational firms with disclosed foreign revenue exposure > 50%, compute rolling 3-year correlation between weekly stock returns and DXY Index (or home-currency index like GBP/USD for UK firms). Uses `CORR() OVER (PARTITION BY company ORDER BY week ROWS BETWEEN 155 PRECEDING AND CURRENT ROW)` for rolling correlations. Weekly frequency is sufficient for capturing FX beta while filtering noise. Identify "FX-exposed" firms (|correlation| > 0.3) vs "FX-neutral" firms.
+**Scope:** All sectors included. This Use Case complements firm-level analyses (UC2–UC4) by providing sector-level insights for portfolio allocation decisions.
 
-2. **Earnings Hit Detection (Fundamental Impact):**
-   Identify firms where reported FX losses (from financial footnotes or "FX impact on earnings" disclosures) reduced net income by >10% in years when domestic currency appreciated >5%. Cross-reference with currency movements from macro table. Break down by country (US vs UK vs others); optionally group by sector where GICS data is complete. Demonstrates join between financial data and FX macro data.
+1. **Sector Performance by Inflation Regime (High vs Low CPI):**
+   Classify each month into "High Inflation" (CPI YoY > 3%) vs "Low Inflation" (CPI YoY ≤ 3%) regimes using macro data. For each regime, calculate average monthly returns by GICS sector. Uses:
+   - `CASE WHEN cpi_yoy > 3 THEN 'High' ELSE 'Low' END` for regime classification
+   - `AVG(sector_return) OVER (PARTITION BY sector, inflation_regime)` for conditional averages
+   
+   Identify "inflation winners" (Energy, Materials) vs "inflation losers" (Utilities, Real Estate). Test hypothesis: do defensive sectors outperform during high-inflation periods?
 
-3. **FX Stress Scenario (Revenue Translation Risk):**
-   Apply a hypothetical +10% domestic currency appreciation shock. Estimate revenue impact using disclosed "foreign revenue as % of total" from financial statements. Recalculate translated revenue assuming: Foreign Rev (USD) → Home Currency at shocked rate. Rank companies by revenue sensitivity (% revenue decline); compare "high-exposure" (>30% foreign revenue) vs "domestic-focused" (<10% foreign revenue) firms. Scenario analysis complements Use Case 3's rate-shock methodology.
+2. **Sector-CPI Lead-Lag Relationship:**
+   Compute rolling 12-month correlation between each sector's monthly return and CPI changes (both contemporaneous and lagged). Uses `LAG(cpi_change, n) OVER (ORDER BY month)` for n = 0, 1, 2, 3 months. Identify:
+   - **Leading sectors:** Returns predict future CPI (commodities may signal inflation)
+   - **Lagging sectors:** Returns respond to past CPI (rate-sensitive sectors react with delay)
+   
+   Rank sectors by lead-lag coefficient; this provides timing signals for sector rotation strategies.
+
+3. **Rate Sensitivity by Sector (Duration Proxy):**
+   For each sector, calculate the rolling 2-year beta of sector returns against 10-year Treasury yield changes. Uses:
+   - Weekly sector returns aggregated from constituent stocks (market-cap weighted where available, equal-weighted otherwise)
+   - `CORR(sector_return, yield_change) OVER (PARTITION BY sector ORDER BY week ROWS BETWEEN 103 PRECEDING AND CURRENT ROW)` for rolling correlation
+   
+   Identify "rate-sensitive" sectors (negative beta: Utilities, Real Estate, REITs) vs "rate-insensitive" sectors (Financials benefit from higher rates). Compare: do sector sensitivities change across different rate regimes (rising vs falling rates)?
