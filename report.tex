@@ -238,9 +238,24 @@ CREATE TABLE financials (
     free_cash_flow DECIMAL(20, 2),
     gross_profit DECIMAL(20, 2),
     total_debt DECIMAL(20, 2),
+    cost_of_goods_sold DECIMAL(20, 2),
+    currency VARCHAR(3),
+    FOREIGN KEY (company_id) REFERENCES companies(company_id),
     UNIQUE(company_id, period_end_date, period_type)
 );
 \end{lstlisting}
+
+\textbf{Data Structure:} The financials table stores raw financial statement items extracted from Bloomberg Terminal. These are the primary data fields from company financial reports (income statement, balance sheet, and cash flow statement). Financial ratios and derived metrics are not stored in the database but are computed on-the-fly in SQL queries from these raw items.
+
+Common ratios computed in queries include:
+\begin{itemize}
+    \item \textbf{Interest Coverage Ratio (ICR)}: $ICR = \frac{EBITDA}{Interest Expense}$
+    \item \textbf{Gross Margin}: $Gross Margin = \frac{Gross Profit}{Revenue}$ or $1 - \frac{COGS}{Revenue}$
+    \item \textbf{Debt-to-Revenue Ratio}: $\frac{Total Debt}{Revenue}$
+    \item \textbf{ROE and other profitability ratios} computed from combinations of these fields
+\end{itemize}
+
+This design approach (storing raw data, computing ratios in queries) maintains data integrity, enables flexible analytical queries, and allows for consistent ratio definitions across different use cases.
 
 \subsection{Analytical Methodology: Financial Sector Exclusion}
 
