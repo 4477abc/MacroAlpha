@@ -85,11 +85,11 @@ Data extraction used Bloomberg's Spreadsheet Builder with Time Series Table form
   - `GROSS_PROFIT` (Gross Profit)
   - `ARD_COST_OF_GOODS_SOLD` (COGS)
 - **Frequency:** 
-  - Annual: Calendar year-end
-  - Quarterly: Calendar quarters
+  - Annual: Fiscal Annual
+  - Quarterly: Fiscal Quarterly
 - **Date Range:** 2005-01-01 to 2024-12-31
 - **Export:** Save as separate Excel files (`financials_annual.xlsx`, `financials_quarterly.xlsx`)
-- **Note:** Bloomberg may not populate all date cells in column A for later years; use `fix_dates.py` to populate missing dates
+- **Note:** Financial companies (banks) may show N/A for EBITDA and Interest Coverage fields—this is expected and correct.
 
 **4. Macroeconomic Indicators**
 - **Tool:** Spreadsheet Builder → `Time Series Table`
@@ -116,16 +116,14 @@ Data extraction used Bloomberg's Spreadsheet Builder with Time Series Table form
 - **Export:** Save as Excel file (`5 countries 10y yield and policy rate.xlsx`)
 
 **6. Index Membership (Historical Snapshots)**
-- **Tool:** Spreadsheet Builder → `Index Constituents`
-- **Index:** `SPX Index` (S&P 500) or `UKX Index` (FTSE 100)
-- **Date:** Select year-end dates (Dec 31, 2005 through Dec 31, 2024)
-- **Fields:** 
-  - Ticker
-  - Weight
-  - Shares Outstanding
-  - Price
-- **Export:** Save as separate Excel files per year (`SPX as of Dec 31 2005.xlsx`, etc.)
-- **Post-Processing:** Use `combine_memb.py` to consolidate into `index_membership_snapshot.csv`
+- **Tool:** Terminal → `SPX Index MEMB <GO>` or `UKX Index MEMB <GO>`
+- **Method:**
+  1. Type `SPX Index MEMB <GO>` (or `UKX Index MEMB <GO>` for FTSE 100)
+  2. Change **As of Date** to the last trading day of each year (Dec 31, 2005 through Dec 31, 2024)
+  3. Click **Export/Output** → CSV or Excel
+  4. Repeat for each year-end date (20 dates × 2 indices = 40 files)
+- **Export:** Save as separate Excel files per year (`SPX as of Dec 31 2005.xlsx`, `UKX as of Dec 31 2005.xlsx`, etc.)
+- **Post-Processing:** Use `combine_memb.py` to consolidate all 40 files into a single long table `index_membership_snapshot.csv` with columns: `index_id`, `as_of_date`, `ticker`, `weight`, etc.
 
 **7. Company Master Data**
 - **Tool:** Spreadsheet Builder → `Company Information`
@@ -154,15 +152,11 @@ All source data files are available in the project repository: [https://github.c
 
 ### Exclusion of Financial Sector from EBITDA-Based Analyses
 
-Several use cases (UC2, UC3, UC4) exclude Financials sector companies from EBITDA-based and Interest Coverage analyses. This reflects fundamental differences in financial statement structures, not a data quality issue:
+Several use cases (UC2, UC3, UC4) exclude Financials sector companies from EBITDA-based and Interest Coverage analyses. This reflects fundamental differences in financial statement structures, not a data quality issue.
 
-| Metric | Non-Financial Companies | Financial Companies (Banks) |
-|--------|------------------------|----------------------------|
-| **EBITDA** | ✅ Applicable | ❌ Not applicable — Interest is core business, not financing cost |
-| **Interest Expense** | Debt servicing cost | Payment to depositors (normal operating cost) |
-| **Interest Coverage Ratio** | Measures debt serviceability | ❌ Meaningless — ratio < 1 is normal for banks |
-| **Debt-to-Equity** | 1.0 = high leverage | 10+ = normal (deposits are liabilities) |
-| **Free Cash Flow** | Operating CF minus CapEx | ❌ Concept inapplicable (is lending CapEx?) |
+For non-financial companies, EBITDA is applicable and interest expense represents debt servicing costs. Interest Coverage Ratio measures debt serviceability, Debt-to-Equity ratios around 1.0 indicate high leverage, and Free Cash Flow (Operating CF minus CapEx) is a meaningful metric.
+
+For financial companies (banks), EBITDA is not applicable because interest is core business revenue, not a financing cost. Interest expense represents payments to depositors (a normal operating cost), making Interest Coverage Ratio meaningless—ratios below 1.0 are normal for banks. Debt-to-Equity ratios of 10+ are normal because deposits (liabilities) fund lending operations. Free Cash Flow is conceptually inapplicable—is lending considered capital expenditure?
 
 Banks earn spread income (Net Interest Income = Interest Received − Interest Paid), so interest expense is their cost of goods sold, not a financing burden. High leverage is structural: banks operate with D/E ratios of 10–15x because deposits (liabilities) fund lending. Bloomberg correctly reports N/A for EBITDA and Interest Coverage at banks like JP Morgan—these metrics are undefined for financial institutions.
 
@@ -172,7 +166,7 @@ Banks require sector-specific metrics (NIM, NPL, Tier 1 Capital Ratio, Loan-to-D
 
 ---
 
-## Core Schema Ideas (high level)
+## Core Schema Ideas
 
 * `Company(company_id, ticker, name, country_id, currency, gics_sub_industry_id, ...)`
 * `Index(index_id, name, currency, ...)`
@@ -184,7 +178,7 @@ Banks require sector-specific metrics (NIM, NPL, Tier 1 Capital Ratio, Loan-to-D
 
 ---
 
-# Use Cases & Queries (Updated)
+# Use Cases & Queries
 
 ## Use Case 1: Market Concentration & Point-in-Time Index Dynamics
 
