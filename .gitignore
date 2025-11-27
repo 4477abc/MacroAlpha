@@ -1,1 +1,7 @@
 macroalpha.db
+
+# LaTeX temporary files
+*.aux
+*.log
+*.out
+*.toc
