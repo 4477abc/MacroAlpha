@@ -35,7 +35,15 @@ Weekly closing prices and total returns for constituent equities. Weekly frequen
 * Source: [`price_weekly.xlsx.xlsx`](https://github.com/4477abc/MacroAlpha/blob/main/price_weekly.xlsx.xlsx) → `prices_weekly` table
 
 #### 4) Corporate Financials
-Standardized income statement, balance sheet, and cash flow items (Revenue, EBITDA, Interest Expense, Debt, FCF, etc.) extracted via Bloomberg `<FA>` function.
+Standardized income statement, balance sheet, and cash flow items extracted via Bloomberg Spreadsheet Builder:
+- **Revenue** (SALES_REV_TURN)
+- **EBITDA** (EBITDA)
+- **Interest Expense** (IS_INT_EXPENSE)
+- **Total Debt** (SHORT_AND_LONG_TERM_DEBT)
+- **Free Cash Flow** (CF_FREE_CASH_FLOW)
+- **Gross Profit** (GROSS_PROFIT) & **COGS** (ARD_COST_OF_GOODS_SOLD)
+- *Note: Ratios like Gross Margin and ROE are computed from these raw items.*
+
 * Annual: [`financials_annual.xlsx`](https://github.com/4477abc/MacroAlpha/blob/main/financials_annual.xlsx) → `financials` table (period_type='ANNUAL')
 * Quarterly: [`financials_quarterly.xlsx`](https://github.com/4477abc/MacroAlpha/blob/main/financials_quarterly.xlsx) → `financials` table (period_type='QUARTERLY')
 
@@ -76,7 +84,7 @@ Data extraction used Bloomberg's Spreadsheet Builder with Time Series Table form
 **3. Financial Statements (Annual/Quarterly)**
 - **Tool:** Spreadsheet Builder → `Time Series Table`
 - **Tickers:** Enter ticker list
-- **Fields:** Use `<FA>` function for standardized fields:
+- **Fields:** Select the following fundamental data fields:
   - `SALES_REV_TURN` (Revenue)
   - `EBITDA` (EBITDA)
   - `IS_INT_EXPENSE` (Interest Expense)
