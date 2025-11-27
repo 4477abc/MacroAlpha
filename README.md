@@ -41,7 +41,7 @@ Data extraction used Bloomberg's Spreadsheet Builder with Time Series Table form
   - `DAY_TO_DAY_TOT_RETURN_GROSS_DVDS` (Total Return)
 - **Frequency:** Weekly (Friday close)
 - **Date Range:** 2005-01-01 to 2024-12-31
-- **Export:** Save as Excel file (`price_weekly.xlsx`)
+- **Export:** Save as Excel file price_weekly.xlsx
 - **Note:** Bloomberg exports in wide-table format (tickers as columns, dates as rows)
 
 **3. Financial Statements (Annual/Quarterly)**
@@ -69,7 +69,7 @@ Data extraction used Bloomberg's Spreadsheet Builder with Time Series Table form
 - **Frequency:** 
   - Annual & Quarterly
 - **Date Range:** 2005-01-01 to 2024-12-31
-- **Export:** Save as separate Excel files (`financials_annual.xlsx`, `financials_quarterly.xlsx`)
+- **Export:** Save as separate Excel files financials_annual.xlsx, financials_quarterly.xlsx
 - **Note:** Financial companies (banks) may show N/A for EBITDA and Interest Coverage fields—this is expected and correct.
 
 **4. Macroeconomic Indicators**
@@ -89,7 +89,7 @@ Data extraction used Bloomberg's Spreadsheet Builder with Time Series Table form
 - **Fields:** Select relevant indicators (GDP, CPI, Employment, Housing Starts, etc.)
 - **Frequency:** Monthly or Quarterly (depending on indicator)
 - **Date Range:** 2005-01-01 to 2024-12-31
-- **Export:** Save as separate Excel files per country (`usa_macros_2024~2005.xlsx`, etc.)
+- **Export:** Save as separate Excel files per country usa_macros_2024~2005.xlsx, etc.
 
 **5. Interest Rates**
 - **Data Source:** Government bond yields and central bank policy rates for five countries (US, UK, DE, JP, CN).
@@ -101,7 +101,7 @@ Data extraction used Bloomberg's Spreadsheet Builder with Time Series Table form
 - **Fields:** `PX_LAST` (Last Price)
 - **Frequency:** Weekly or Daily
 - **Date Range:** 2005-01-01 to 2024-12-31
-- **Export:** Save as Excel file (`5 countries 10y yield and policy rate.xlsx`)
+- **Export:** Save as Excel file 5 countries 10y yield and policy rate.xlsx
 
 **6. Index Membership (Historical Snapshots)**
 - **Data Source:** Historical membership data for S&P 500 and FTSE 100 with effective dates and weights. This file consolidates year-end snapshots (SPX/UKX as of Dec 31 YYYY.xlsx) to enable point-in-time analysis and avoid survivorship bias.
@@ -112,7 +112,7 @@ Data extraction used Bloomberg's Spreadsheet Builder with Time Series Table form
   2. Change **As of Date** to the last trading day of each year (Dec 31, 2005 through Dec 31, 2024)
   3. Click **Export/Output** → CSV or Excel
   4. Repeat for each year-end date (20 dates × 2 indices = 40 files)
-- **Export:** Save as separate Excel files per year (`SPX as of Dec 31 2005.xlsx`, `UKX as of Dec 31 2005.xlsx`, etc.)
+- **Export:** Save as separate Excel files per year SPX as of Dec 31 2005.xlsx, UKX as of Dec 31 2005.xlsx, etc.
 - **Post-Processing:** Use `combine_memb.py` to consolidate all 40 files into a single long table `index_membership_snapshot.csv` with columns: `index_id`, `as_of_date`, `ticker`, `weight`, etc.
 
 **7. Company Master Data**
@@ -129,7 +129,7 @@ Data extraction used Bloomberg's Spreadsheet Builder with Time Series Table form
   - `GICS_INDUSTRY_NAME` (GICS Industry)
   - `GICS_SUB_INDUSTRY_NAME` (GICS Sub-Industry)
   - `CUR_MKT_CAP` (Current Market Cap)
-- **Export:** Save as CSV file (`company_master.csv`)
+- **Export:** Save as CSV file company_master.csv
 
 #### Data Quality Notes
 - Bloomberg may return `#N/A` or `--` for missing data points; these are handled as NULL in the database
