@@ -53,7 +53,98 @@ Government bond yields and central bank policy rates for five countries (US, UK,
 
 ### Bloomberg Terminal Extraction Process
 
-Data extraction used Bloomberg's Spreadsheet Builder (Time Series Table). Prices were extracted weekly (Friday close), macro indicators monthly/quarterly. Fields included `PX_LAST` and `DAY_TO_DAY_TOT_RETURN_GROSS_DVDS` for prices, `<FA>` standardized fields for financials, and `<ECST>` economic statistics for macro data. To manage volume (1000+ tickers × 20 years), extractions were batched (100-200 tickers per request) and concatenated locally. Returns, rolling correlations, and volatility measures are computed in the database using SQL window functions rather than pre-computed in Bloomberg.
+#### Overview
+Data extraction used Bloomberg's Spreadsheet Builder with Time Series Table format. To manage volume (1000+ tickers × 20 years), extractions were batched (100-200 tickers per request) and concatenated locally. Returns, rolling correlations, and volatility measures are computed in the database using SQL window functions rather than pre-computed in Bloomberg.
+
+#### Step-by-Step Export Instructions
+
+**1. Access Spreadsheet Builder**
+- In Bloomberg Terminal, type `W <GO>` to open Excel Add-In
+- Or use menu: `Excel` → `Bloomberg` → `Spreadsheet Builder`
+
+**2. Equity Price Data (Weekly)**
+- **Tool:** Spreadsheet Builder → `Time Series Table`
+- **Tickers:** Enter ticker list (batch 100-200 tickers per request)
+- **Fields:** 
+  - `PX_LAST` (Last Price)
+  - `DAY_TO_DAY_TOT_RETURN_GROSS_DVDS` (Total Return)
+- **Frequency:** Weekly (Friday close)
+- **Date Range:** 2005-01-01 to 2024-12-31
+- **Export:** Save as Excel file (`price_weekly.xlsx.xlsx`)
+- **Note:** Bloomberg exports in wide-table format (tickers as columns, dates as rows)
+
+**3. Financial Statements (Annual/Quarterly)**
+- **Tool:** Spreadsheet Builder → `Time Series Table`
+- **Tickers:** Enter ticker list
+- **Fields:** Use `<FA>` function for standardized fields:
+  - `SALES_REV_TURN` (Revenue)
+  - `EBITDA` (EBITDA)
+  - `IS_INT_EXPENSE` (Interest Expense)
+  - `SHORT_AND_LONG_TERM_DEBT` (Total Debt)
+  - `CF_FREE_CASH_FLOW` (Free Cash Flow)
+  - `GROSS_PROFIT` (Gross Profit)
+  - `ARD_COST_OF_GOODS_SOLD` (COGS)
+- **Frequency:** 
+  - Annual: Calendar year-end
+  - Quarterly: Calendar quarters
+- **Date Range:** 2005-01-01 to 2024-12-31
+- **Export:** Save as separate Excel files (`financials_annual.xlsx`, `financials_quarterly.xlsx`)
+- **Note:** Bloomberg may not populate all date cells in column A for later years; use `fix_dates.py` to populate missing dates
+
+**4. Macroeconomic Indicators**
+- **Tool:** Spreadsheet Builder → `Time Series Table`
+- **Country Tickers:** Use `<ECST>` function for economic statistics:
+  - US: `USGDP Index`, `USCPI Index`, `USUNEMPL Index`, etc.
+  - UK: `UKGDP Index`, `UKCPI Index`, `UKUNEMPL Index`, etc.
+  - Germany: `BDGDP Index`, `BDCPI Index`, `BDUNEMPL Index`, etc.
+  - Japan: `JPGDP Index`, `JPCPI Index`, `JPUNEMPL Index`, etc.
+  - China: `CNGDP Index`, `CNCPI Index`, `CNUNEMPL Index`, etc.
+- **Fields:** Select relevant indicators (GDP, CPI, Employment, Housing Starts, etc.)
+- **Frequency:** Monthly or Quarterly (depending on indicator)
+- **Date Range:** 2005-01-01 to 2024-12-31
+- **Export:** Save as separate Excel files per country (`usa_macros_2024~2005.xlsx`, etc.)
+- **Note:** Column headers show month names (Dec, Nov, Oct...) without years; dates are reconstructed from column position
+
+**5. Interest Rates**
+- **Tool:** Spreadsheet Builder → `Time Series Table`
+- **Tickers:**
+  - 10Y Yields: `USGG10YR Index`, `GTGBP10Y Govt`, `GTDEM10Y Govt`, `GTJPY10Y Govt`, `GTCNY10Y Govt`
+  - Policy Rates: `FDTR Index` (US), `UKBRBASE Index` (UK), `EURR002W Index` (EU/Germany), `BOJDTR Index` (Japan), `PBOC7P Index` (China)
+- **Fields:** `PX_LAST` (Last Price)
+- **Frequency:** Weekly or Daily
+- **Date Range:** 2005-01-01 to 2024-12-31
+- **Export:** Save as Excel file (`5 countries 10y yield and policy rate.xlsx`)
+
+**6. Index Membership (Historical Snapshots)**
+- **Tool:** Spreadsheet Builder → `Index Constituents`
+- **Index:** `SPX Index` (S&P 500) or `UKX Index` (FTSE 100)
+- **Date:** Select year-end dates (Dec 31, 2005 through Dec 31, 2024)
+- **Fields:** 
+  - Ticker
+  - Weight
+  - Shares Outstanding
+  - Price
+- **Export:** Save as separate Excel files per year (`SPX as of Dec 31 2005.xlsx`, etc.)
+- **Post-Processing:** Use `combine_memb.py` to consolidate into `index_membership_snapshot.csv`
+
+**7. Company Master Data**
+- **Tool:** Spreadsheet Builder → `Company Information`
+- **Tickers:** Enter full ticker list
+- **Fields:**
+  - `NAME` (Company Name)
+  - `COUNTRY` (Country)
+  - `CRNCY` (Currency)
+  - `GICS_SECTOR_NAME` (GICS Sector)
+  - `GICS_INDUSTRY_GROUP_NAME` (GICS Industry Group)
+  - `GICS_INDUSTRY_NAME` (GICS Industry)
+  - `GICS_SUB_INDUSTRY_NAME` (GICS Sub-Industry)
+  - `CUR_MKT_CAP` (Current Market Cap)
+- **Export:** Save as CSV file (`company_master.csv`)
+
+#### Data Quality Notes
+- Bloomberg may return `#N/A` or `--` for missing data points; these are handled as NULL in the database
+- Some date columns may be incomplete (especially in financials files); use `fix_dates.py` to populate missing dates
+- Wide-table format requires parsing logic to extract ticker-field pairs (see `etl_import.py`)
 
 All source data files are available in the project repository: [https://github.com/4477abc/MacroAlpha](https://github.com/4477abc/MacroAlpha)
 
