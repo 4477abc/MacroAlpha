@@ -1,65 +1,61 @@
 # Project Proposal: MacroAlpha — Global Macroeconomic Sensitivity & Corporate Performance Analysis System (Point-in-Time)
 
+## Group Name
+
+**MacroAlpha Team**
+
 ## Topic (Database Application)
 
 **MacroAlpha: Global Macroeconomic Sensitivity & Corporate Performance Analysis System**
 
-MacroAlpha is an institutional-style “Top-Down” research database. Instead of analyzing firms in isolation, it models the dynamic mapping between **Macroeconomic Indicators** (GDP, CPI, yields, FX indexes) and **Corporate Fundamentals/Market Performance** (financial statements, solvency, margins, returns), while ensuring **point-in-time correctness** for index universes (e.g., S&P 500, FTSE 100) across long horizons.
+MacroAlpha is a "Top-Down" research database that connects macroeconomic indicators (GDP, CPI, yields, FX) with corporate fundamentals and market performance. Unlike firm-level analyses, it models these relationships across economic cycles while maintaining point-in-time correctness for index universes (S&P 500, FTSE 100) over 20-year horizons.
 
-**Project Goal**
+The system quantifies macro sensitivity by sector, industry, and company; identifies defensive versus cyclical exposures, inflation resilience, and rate-shock solvency risk; and supports scenario analysis through reproducible SQL queries on real datasets.
 
-* Quantify **macro sensitivity** (by sector, industry, and company) across cycles.
-* Identify **defensive vs cyclical** exposures, inflation resilience, and rate-shock solvency risk.
-* Support “what-if” scenario analysis with reproducible SQL queries on real datasets.
-
-**Technical Complexity**
-
-* Multi-granularity time series (weekly prices, quarterly macro, annual/quarterly financials) with alignment logic.
-* Advanced SQL: **window functions** (LAG/LEAD/rolling windows), **complex joins** (country/industry/FX mappings), **recursive queries** (GICS hierarchy rollups), and **derived metrics** (growth, ratios, stress scenarios).
+Technical implementation handles multi-granularity time series (weekly prices, quarterly macro, annual/quarterly financials) with alignment logic. SQL techniques include window functions (LAG/LEAD, rolling windows), complex joins (country/industry/FX mappings), recursive queries (GICS hierarchy rollups), and derived metrics (growth, ratios, stress scenarios).
 
 ---
 
 ## Data Sources & Acquisition Strategy (Bloomberg Terminal)
 
-### 1) Macro & Market Data (Bloomberg)
+Data was extracted from Bloomberg Terminal and exported to cleaned CSV/Excel files. The following files populate the database:
 
-* **Macro indicators:** `<ECST>` for GDP, CPI, policy rates, sovereign yields across major economies (US, UK, DE, JP, CN).
-* **FX & indexes:** DXY (and/or relevant home-currency indexes), government bond benchmarks (e.g., 10Y).
-* **Equity market data:** **Weekly** price levels and returns for constituent equities plus index levels.
-  - **Rationale for Weekly Frequency:** Weekly data provides optimal balance between:
-    1. **Frequency matching:** Aligns better with quarterly macro indicators and annual/quarterly financial statements
-    2. **Noise reduction:** Filters out intraday volatility and market microstructure noise
-    3. **Sufficiency for analysis:** All proposed use cases (correlations, beta calculations, rolling windows) are fully supported by weekly granularity
-    4. **Data manageability:** Reduces dimensionality while preserving analytical integrity (especially critical for 1000+ tickers over 20 years)
+### Data Source Files (with GitHub Links)
 
-### 2) Corporate Fundamentals (Bloomberg) — *Point-in-Time & Cross-Sectional Standardization*
+#### 1) Company Master Data
+Company master file with ticker, name, country, currency, GICS classification, and market capitalization.
+* Source: [`company_master.csv`](https://github.com/4477abc/MacroAlpha/blob/main/company_master.csv) → `companies` table
 
-* **Financial statements & derived fields:** `<FA>` for standardized income statement / balance sheet / cash flow items (Revenue, EBITDA, Interest Expense, Debt, FCF, margins, ROE, etc.), across companies that appear in the index history.
-* **Industry classification:** GICS sector/industry/sub-industry labels for hierarchical grouping.
+#### 2) Index Membership (Point-in-Time)
+Historical membership data for S&P 500 and FTSE 100 with effective dates and weights. This file consolidates year-end snapshots (SPX/UKX as of Dec 31 YYYY.xlsx) to enable point-in-time analysis and avoid survivorship bias.
+* Source: [`index_membership_snapshot.csv`](https://github.com/4477abc/MacroAlpha/blob/main/index_membership_snapshot.csv) → `index_membership` table
 
-### 3) Critical Addition: **Historical Index Membership (Point-in-Time Universe)**
+#### 3) Equity Price Data
+Weekly closing prices and total returns for constituent equities. Weekly frequency balances frequency matching (aligns with quarterly macro and annual/quarterly financials), noise reduction (filters intraday volatility), analytical sufficiency (supports correlations, beta, rolling windows), and data manageability (critical for 1000+ tickers over 20 years).
+* Source: [`price_weekly.xlsx.xlsx`](https://github.com/4477abc/MacroAlpha/blob/main/price_weekly.xlsx.xlsx) → `prices_weekly` table
 
-To avoid survivorship bias, MacroAlpha will not use “today’s members”. Instead, we will ingest **historical index membership** for:
+#### 4) Corporate Financials
+Standardized income statement, balance sheet, and cash flow items (Revenue, EBITDA, Interest Expense, Debt, FCF, etc.) extracted via Bloomberg `<FA>` function.
+* Annual: [`financials_annual.xlsx`](https://github.com/4477abc/MacroAlpha/blob/main/financials_annual.xlsx) → `financials` table (period_type='ANNUAL')
+* Quarterly: [`financials_quarterly.xlsx`](https://github.com/4477abc/MacroAlpha/blob/main/financials_quarterly.xlsx) → `financials` table (period_type='QUARTERLY')
 
-* **S&P 500** and **FTSE 100**
-* with **effective date ranges** per security (entry date / exit date), optionally weights.
+#### 5) Macroeconomic Indicators
+GDP, CPI, employment, housing starts, and other economic indicators extracted via Bloomberg `<ECST>` function for five countries:
+* US: [`usa_macros_2024~2005.xlsx`](https://github.com/4477abc/MacroAlpha/blob/main/usa_macros_2024~2005.xlsx) → `macro_indicators` (country_id='US')
+* UK: [`uk_macros_2024~2005.xlsx`](https://github.com/4477abc/MacroAlpha/blob/main/uk_macros_2024~2005.xlsx) → `macro_indicators` (country_id='GB')
+* Germany: [`de_macros_2024~2005.xlsx`](https://github.com/4477abc/MacroAlpha/blob/main/de_macros_2024~2005.xlsx) → `macro_indicators` (country_id='DE')
+* Japan: [`jp_macros_2024~2005.xlsx`](https://github.com/4477abc/MacroAlpha/blob/main/jp_macros_2024~2005.xlsx) → `macro_indicators` (country_id='JP')
+* China: [`cn_macros_2024~2005.xlsx`](https://github.com/4477abc/MacroAlpha/blob/main/cn_macros_2024~2005.xlsx) → `macro_indicators` (country_id='CN')
 
-This dataset will be the backbone for all “index-based” analyses: for any date (t), the valid universe is:
-`start_date <= t AND (end_date IS NULL OR end_date > t)`.
+#### 6) Interest Rates
+Government bond yields and central bank policy rates for five countries (US, UK, DE, JP, CN).
+* Source: [`5 countries 10y yield and policy rate.xlsx`](https://github.com/4477abc/MacroAlpha/blob/main/5%20countries%2010y%20yield%20and%20policy%20rate.xlsx) → `interest_rates` table
 
-### Static ETL & Bloomberg Extraction Strategy
+### Bloomberg Terminal Extraction Process
 
-We will export Bloomberg results to cleaned CSV files and ingest into the relational database. The final submission runs fully locally using those files, reproducing all queries.
+Data extraction used Bloomberg's Spreadsheet Builder (Time Series Table). Prices were extracted weekly (Friday close), macro indicators monthly/quarterly. Fields included `PX_LAST` and `DAY_TO_DAY_TOT_RETURN_GROSS_DVDS` for prices, `<FA>` standardized fields for financials, and `<ECST>` economic statistics for macro data. To manage volume (1000+ tickers × 20 years), extractions were batched (100-200 tickers per request) and concatenated locally. Returns, rolling correlations, and volatility measures are computed in the database using SQL window functions rather than pre-computed in Bloomberg.
 
-**Bloomberg Terminal Extraction Process:**
-
-1. **Tool:** Spreadsheet Builder → Time Series Table
-2. **Frequency:** Weekly (preferably Friday close / end-of-week)
-3. **Fields:** Start with `PX_LAST` (closing price); additional fields as needed
-4. **Batch Strategy:** To manage data volume (1000+ tickers × 20 years):
-   - Extract in batches of 100-200 tickers per request
-   - Concatenate locally to avoid Excel/Bloomberg limits
-5. **Derived Calculations:** Compute returns, rolling correlations, and volatility measures in the database using SQL window functions rather than pre-computing in Bloomberg
+All source data files are available in the project repository: [https://github.com/4477abc/MacroAlpha](https://github.com/4477abc/MacroAlpha)
 
 ---
 
@@ -67,7 +63,7 @@ We will export Bloomberg results to cleaned CSV files and ingest into the relati
 
 ### Exclusion of Financial Sector from EBITDA-Based Analyses
 
-**Important Methodological Note:** Several Use Cases (UC2, UC3, UC4) explicitly exclude companies in the **Financials** sector (Banks, Insurance, Diversified Financials) from EBITDA-based and Interest Coverage analyses. This is **not** a data quality issue but a **correct analytical practice** reflecting fundamental differences in financial statement structures:
+Several use cases (UC2, UC3, UC4) exclude Financials sector companies from EBITDA-based and Interest Coverage analyses. This reflects fundamental differences in financial statement structures, not a data quality issue:
 
 | Metric | Non-Financial Companies | Financial Companies (Banks) |
 |--------|------------------------|----------------------------|
@@ -77,21 +73,11 @@ We will export Bloomberg results to cleaned CSV files and ingest into the relati
 | **Debt-to-Equity** | 1.0 = high leverage | 10+ = normal (deposits are liabilities) |
 | **Free Cash Flow** | Operating CF minus CapEx | ❌ Concept inapplicable (is lending CapEx?) |
 
-**Why This Matters:**
+Banks earn spread income (Net Interest Income = Interest Received − Interest Paid), so interest expense is their cost of goods sold, not a financing burden. High leverage is structural: banks operate with D/E ratios of 10–15x because deposits (liabilities) fund lending. Bloomberg correctly reports N/A for EBITDA and Interest Coverage at banks like JP Morgan—these metrics are undefined for financial institutions.
 
-1. **Banks earn spread income:** Net Interest Income = Interest Received − Interest Paid. Interest expense is their cost of goods sold, not financing burden.
-2. **High leverage is structural:** Banks operate with D/E ratios of 10–15x because deposits (liabilities) fund their lending business.
-3. **Bloomberg correctly reports N/A:** For banks like JP Morgan, EBITDA and Interest Coverage fields are intentionally blank — these metrics are undefined for financial institutions.
+SQL implementation: `WHERE gics_sector_name != 'Financials'`. This filter appears in queries involving EBITDA, Interest Coverage, and Free Cash Flow, following the industry-standard approach used by rating agencies (Moody's, S&P), equity research, and academic studies.
 
-**Implementation in SQL:**
-```sql
-WHERE gics_sector_name != 'Financials'
-```
-
-This filter appears in queries involving EBITDA, Interest Coverage, and Free Cash Flow. It is the **industry-standard approach** used by rating agencies (Moody's, S&P), equity research, and academic studies when analyzing corporate leverage and solvency.
-
-**Alternative Metrics for Financials (Out of Scope):**
-Banks would require sector-specific metrics: Net Interest Margin (NIM), Non-Performing Loan Ratio (NPL), Tier 1 Capital Ratio, Loan-to-Deposit Ratio. These are not included in this project's scope but could be added as a future extension.
+Banks require sector-specific metrics (NIM, NPL, Tier 1 Capital Ratio, Loan-to-Deposit Ratio), which are out of scope for this project but could be added as a future extension.
 
 ---
 
@@ -111,87 +97,50 @@ Banks would require sector-specific metrics: Net Interest Margin (NIM), Non-Perf
 
 ## Use Case 1: Market Concentration & Point-in-Time Index Dynamics
 
-**Goal:** Analyze market structure evolution and concentration trends using FTSE 100, demonstrating survivorship-bias-free analysis with complete Weight/Shares data.
+Analyzes market structure evolution and concentration trends using FTSE 100, demonstrating survivorship-bias-free analysis. UKX provides complete historical Weight and Shares Outstanding data (unlike SPX where 83% are missing), enabling precise point-in-time calculations without imputation.
 
-**Rationale for UK Focus:** UKX provides complete historical Weight and Shares Outstanding data (unlike SPX where 83% of Weight/Shares are missing), enabling precise point-in-time calculations without data imputation. This showcases the methodology applicable to any market with complete data.
+1. **Top-Heavy Concentration Trend (2005–2024):** Calculates cumulative weight of Top 10 companies in FTSE 100 for each year-end. Uses `ROW_NUMBER() OVER (PARTITION BY year ORDER BY weight DESC)` to identify top holdings, then aggregates weights. Correlates concentration ratio with UK GDP growth to test whether concentration increases during economic stress.
 
-1. **Top-Heavy Concentration Trend (2005–2024):**
-   Calculate the cumulative weight of Top 10 companies in FTSE 100 for each year-end; test whether UK market has become more concentrated over time. Uses `ROW_NUMBER() OVER (PARTITION BY year ORDER BY weight DESC)` to identify top holdings, then aggregate their weights. Correlate concentration ratio with UK GDP growth to test if concentration increases during economic stress.
+2. **Herfindahl-Hirschman Index (HHI) by Year:** Computes HHI = SUM(weight²) for each year-end snapshot. Joins with macro indicators (UK GDP growth, FTSE 100 returns) to analyze whether higher concentration predicts market returns. Uses point-in-time membership to avoid survivorship bias.
 
-2. **Herfindahl-Hirschman Index (HHI) by Year:**
-   Compute market concentration index HHI = SUM(weight²) for each year-end membership snapshot; identify years of maximum/minimum concentration. Join with macro indicators (UK GDP growth, FTSE 100 returns) to analyze: does higher concentration predict lower/higher market returns? Uses point-in-time membership to avoid survivorship bias.
-
-3. **Index Churn Analysis (Entry/Exit Dynamics):**
-   Identify companies added to or removed from FTSE 100 each year using `LAG(membership_flag) OVER (PARTITION BY company ORDER BY year)`; compare the average valuation metrics (Price-to-Book, Market Cap) of "exited" vs "continuing" members. Test hypothesis: are index removals driven by fundamental deterioration or just relative size changes? Demonstrates complex temporal joins and point-in-time correctness.
+3. **Index Churn Analysis (Entry/Exit Dynamics):** Identifies companies added to or removed from FTSE 100 each year using `LAG(membership_flag) OVER (PARTITION BY company ORDER BY year)`. Compares average valuation metrics (Price-to-Book, Market Cap) of exited versus continuing members to test whether removals are driven by fundamental deterioration or relative size changes.
 
 ## Use Case 2: Corporate Leverage Cycles & Financial Health Evolution
 
-**Goal:** Analyze how corporate capital structure (leverage ratios) evolves across economic cycles, and identify companies whose debt burden creates vulnerability to rate shocks. This analysis does not require GICS sector classification, using data-driven groupings instead.
+Analyzes how corporate capital structure evolves across economic cycles and identifies companies vulnerable to rate shocks. Uses data-driven groupings rather than GICS sector classification. Scope: non-financial companies only (`WHERE gics_sector_name != 'Financials'`).
 
-**Scope:** Non-financial companies only (`WHERE gics_sector_name != 'Financials'`). See "Analytical Methodology" section for rationale.
+1. **Debt-to-Equity Ratio Distribution Evolution (2005–2024):** Calculates cross-sectional distribution of Debt-to-Equity ratios for each year using `PERCENTILE_CONT()` (P25, Median, P75, P90). Tracks distribution shifts during pre-2008 credit boom, 2008–2009 deleveraging, and post-2010 recovery. Joins with macro GDP growth to test whether leverage increases during expansions.
 
-1. **Debt-to-Equity Ratio Distribution Evolution (2005–2024):**
-   For each year, calculate the cross-sectional distribution of Debt-to-Equity ratios across all companies with available data. Compute key percentiles (P25, Median, P75, P90) using `PERCENTILE_CONT()`. Visualize how the distribution shifts during: (a) pre-2008 credit boom, (b) 2008–2009 deleveraging, (c) post-2010 recovery. Join with macro GDP growth to test: does leverage increase during expansions?
+2. **Deleveraging Cycles Detection (Firm-Level):** Identifies companies that reduced D/E ratio for 3+ consecutive years using `LAG(de_ratio, 1)` and `LAG(de_ratio, 2)`. Counts firms deleveraging during GDP contraction years versus expansion years to test whether deleveraging is pro-cyclical (occurs during stress) or counter-cyclical (occurs during recovery).
 
-2. **Deleveraging Cycles Detection (Firm-Level):**
-   Identify companies that reduced D/E ratio for 3+ consecutive years. Use `LAG(de_ratio, 1) OVER (PARTITION BY company ORDER BY year)` and `LAG(de_ratio, 2)` to detect persistent deleveraging. Count how many firms deleveraged during: (a) GDP contraction years vs (b) expansion years. Test hypothesis: is deleveraging pro-cyclical (occurs during stress) or counter-cyclical (occurs during recovery)?
-
-3. **Interest Coverage Sensitivity to Policy Rates:**
-   For each company with 10+ years of data, calculate the rolling 5-year correlation between Interest Coverage Ratio (EBITDA / Interest Expense) and the domestic policy rate. Identify "rate-sensitive" companies (high negative correlation) vs "rate-insulated" companies (near-zero correlation). Rank companies by sensitivity score; this provides a data-driven alternative to sector-based classification of "cyclical" firms. Uses window functions for rolling correlations.
+3. **Interest Coverage Sensitivity to Policy Rates:** For companies with 10+ years of data, calculates rolling 5-year correlation between Interest Coverage Ratio (EBITDA / Interest Expense) and domestic policy rate. Ranks companies by sensitivity score to identify rate-sensitive (high negative correlation) versus rate-insulated (near-zero correlation) firms, providing a data-driven alternative to sector-based classification.
 
 ## Use Case 3: Rate-Shock Solvency Stress Test (Point-in-Time + Scenario)
 
-**Goal:** Measure rate sensitivity and identify "zombie companies" credibly through time. This analysis uses annual/quarterly financial statements + policy rate data; demonstrates scenario analysis and early warning signals.
+Measures rate sensitivity and identifies "zombie companies" through time using annual/quarterly financial statements and policy rate data. Demonstrates scenario analysis and early warning signals. Scope: non-financial companies only (`WHERE gics_sector_name != 'Financials'`).
 
-**Scope:** Non-financial companies only (`WHERE gics_sector_name != 'Financials'`). Interest Coverage Ratio is undefined for banks; they use different solvency metrics (Tier 1 Capital, NPL ratios).
+1. **Zombie Companies (3-Year Persistence) with Macro Constraint:** Identifies companies with Interest Coverage Ratio < 1.5 for 3 consecutive years located in countries with declining GDP growth (negative slope over 3-year window). Uses `LAG()` and `LEAD()` to detect persistence. Joins with macro GDP table to filter by country-level growth trend. Point-in-time membership ensures only actively traded companies at each date are analyzed.
 
-1. **Zombie Companies (3-Year Persistence) with Macro Constraint:**
-   Identify companies with Interest Coverage Ratio (EBITDA / Interest Expense) < 1.5 for 3 consecutive years **and** located in countries with declining GDP growth trend (negative slope over 3-year window). Uses `LAG()` and `LEAD()` window functions to detect 3-year persistence. Join with macro GDP table to filter by country-level growth trend. Point-in-time membership ensures only "actively traded" companies at each date are analyzed.
+2. **200bp Rate Shock Scenario (Stress Testing):** Simulates a +200 basis point increase in policy rates. Recalculates interest expense assuming 50% floating-rate (reprices immediately) and 50% fixed. Recomputes Interest Coverage Ratio and Net Income under shocked rates. Flags companies transitioning from healthy (ratio > 2.0) to at-risk (ratio < 1.5). Compares shock impact across countries.
 
-2. **200bp Rate Shock Scenario (Stress Testing):**
-   Simulate a hypothetical +200 basis point increase in policy rates. Recalculate interest expense assuming: (a) 50% of debt is floating-rate and reprices immediately, (b) 50% is fixed. Recompute Interest Coverage Ratio and Net Income under shocked rates. Flag companies that transition from "healthy" (ratio > 2.0) to "at-risk" (ratio < 1.5) under the shock. Compare shock impact across countries (US vs UK vs others).
-
-3. **Geographic Risk Concentration (Systemic Solvency Risk):**
-   Rank **countries** (not sectors) by: (a) percentage of companies falling below coverage threshold (< 1.5), (b) aggregate debt of "zombie" companies as % of country GDP. Identify which geographies have the highest concentration of systemic solvency risk. This geographic lens complements Use Case 2's firm-level analysis. Optionally: use recursive CTE if analyzing parent-subsidiary structures across borders.
+3. **Geographic Risk Concentration (Systemic Solvency Risk):** Ranks countries by percentage of companies below coverage threshold (< 1.5) and aggregate debt of zombie companies as % of country GDP. Identifies geographies with highest systemic solvency risk concentration, complementing Use Case 2's firm-level analysis.
 
 ## Use Case 4: Macro Lead-Lag & Business Cycle Sensitivity
 
-**Goal:** Test whether macro indicators lead corporate fundamentals with time lags, and classify companies by business cycle sensitivity using data-driven methods (without requiring GICS sector labels).
+Tests whether macro indicators lead corporate fundamentals with time lags and classifies companies by business cycle sensitivity using data-driven methods. Query 3 excludes financial companies due to FCF metric inapplicability; Queries 1–2 include all sectors.
 
-**Scope:** Query 3 (Downturn Resilience) excludes financial companies due to FCF metric inapplicability. Queries 1–2 include all sectors.
+1. **Housing Starts Lead Revenue (2-Quarter Lag Test):** Uses `LAG(housing_starts, 2) OVER (PARTITION BY country ORDER BY quarter)` to align lagged housing data with company revenue growth. Filters for companies with high consumer durables or home improvement exposure. Tests whether housing activity predicts revenue with a 6-month lag. Requires cross-frequency join: quarterly macro → quarterly/annual financials.
 
-1. **Housing Starts Lead Revenue (2-Quarter Lag Test):**
-   Use `LAG(housing_starts, 2) OVER (PARTITION BY country ORDER BY quarter)` to align lagged housing data with company revenue growth. Filter for companies with high "consumer durables" or "home improvement" exposure (identified via keywords in company name/description, or manually tagged subset). Test: does housing activity predict revenue with a 6-month lag? Requires cross-frequency join: quarterly macro → quarterly/annual financials.
+2. **Revenue Volatility as Cyclicality Proxy (Data-Driven Classification):** Computes 10-year rolling standard deviation of revenue growth using `STDDEV() OVER (PARTITION BY company ORDER BY year ROWS BETWEEN 9 PRECEDING AND CURRENT ROW)`. Classifies companies into quartiles using `NTILE(4)`: High Volatility (Q4) represents cyclical firms, Low Volatility (Q1) represents defensive firms. Validates whether high-volatility firms underperform during GDP contraction years, providing an objective alternative to GICS-based labels.
 
-2. **Revenue Volatility as Cyclicality Proxy (Data-Driven Classification):**
-   Compute 10-year rolling standard deviation of revenue growth for each company using `STDDEV() OVER (PARTITION BY company ORDER BY year ROWS BETWEEN 9 PRECEDING AND CURRENT ROW)`. Classify companies into quartiles using `NTILE(4)`: "High Volatility" (Q4) represents cyclical firms, "Low Volatility" (Q1) represents defensive firms. Validate classification: do high-volatility firms underperform during GDP contraction years? This provides an objective, data-driven alternative to GICS-based cyclical/defensive labels.
-
-3. **Downturn Resilience (Cash Flow Focus):**
-   Identify GDP contraction quarters (YoY GDP growth < 0). Within those quarters, list companies that maintained positive Free Cash Flow despite negative revenue growth. Compute "resilience rate" by country: (# of resilient firms) / (# of total firms with negative revenue). Compare: do US vs UK vs other markets show different resilience patterns? Demonstrates complex conditional logic and multi-table joins.
+3. **Downturn Resilience (Cash Flow Focus):** Identifies GDP contraction quarters (YoY GDP growth < 0). Lists companies that maintained positive Free Cash Flow despite negative revenue growth. Computes resilience rate by country: (# of resilient firms) / (# of total firms with negative revenue). Compares resilience patterns across US, UK, and other markets.
 
 ## Use Case 5: Sector Rotation & Inflation Regime Analysis
 
-**Goal:** Analyze how different GICS sectors perform across macroeconomic regimes (inflation environments, rate cycles), and identify sector rotation patterns that lead or lag macro indicators. This analysis uses weekly price data + GICS classification + macro indicators (CPI, policy rates).
+Analyzes how GICS sectors perform across macroeconomic regimes (inflation environments, rate cycles) and identifies sector rotation patterns that lead or lag macro indicators. Uses weekly price data, GICS classification, and macro indicators (CPI, policy rates). All sectors included. Complements firm-level analyses (UC2–UC4) by providing sector-level insights for portfolio allocation.
 
-**Scope:** All sectors included. This Use Case complements firm-level analyses (UC2–UC4) by providing sector-level insights for portfolio allocation decisions.
+1. **Sector Performance by Inflation Regime (High vs Low CPI):** Classifies each month into High Inflation (CPI YoY > 3%) versus Low Inflation (CPI YoY ≤ 3%) using `CASE WHEN cpi_yoy > 3 THEN 'High' ELSE 'Low' END`. Calculates average monthly returns by GICS sector for each regime using `AVG(sector_return) OVER (PARTITION BY sector, inflation_regime)`. Identifies inflation winners (Energy, Materials) versus inflation losers (Utilities, Real Estate). Tests whether defensive sectors outperform during high-inflation periods.
 
-1. **Sector Performance by Inflation Regime (High vs Low CPI):**
-   Classify each month into "High Inflation" (CPI YoY > 3%) vs "Low Inflation" (CPI YoY ≤ 3%) regimes using macro data. For each regime, calculate average monthly returns by GICS sector. Uses:
-   - `CASE WHEN cpi_yoy > 3 THEN 'High' ELSE 'Low' END` for regime classification
-   - `AVG(sector_return) OVER (PARTITION BY sector, inflation_regime)` for conditional averages
-   
-   Identify "inflation winners" (Energy, Materials) vs "inflation losers" (Utilities, Real Estate). Test hypothesis: do defensive sectors outperform during high-inflation periods?
+2. **Sector-CPI Lead-Lag Relationship:** Computes rolling 12-month correlation between each sector's monthly return and CPI changes (contemporaneous and lagged) using `LAG(cpi_change, n) OVER (ORDER BY month)` for n = 0, 1, 2, 3 months. Identifies leading sectors (returns predict future CPI) and lagging sectors (returns respond to past CPI). Ranks sectors by lead-lag coefficient to provide timing signals for sector rotation strategies.
 
-2. **Sector-CPI Lead-Lag Relationship:**
-   Compute rolling 12-month correlation between each sector's monthly return and CPI changes (both contemporaneous and lagged). Uses `LAG(cpi_change, n) OVER (ORDER BY month)` for n = 0, 1, 2, 3 months. Identify:
-   - **Leading sectors:** Returns predict future CPI (commodities may signal inflation)
-   - **Lagging sectors:** Returns respond to past CPI (rate-sensitive sectors react with delay)
-   
-   Rank sectors by lead-lag coefficient; this provides timing signals for sector rotation strategies.
-
-3. **Rate Sensitivity by Sector (Duration Proxy):**
-   For each sector, calculate the rolling 2-year beta of sector returns against 10-year Treasury yield changes. Uses:
-   - Weekly sector returns aggregated from constituent stocks (market-cap weighted where available, equal-weighted otherwise)
-   - `CORR(sector_return, yield_change) OVER (PARTITION BY sector ORDER BY week ROWS BETWEEN 103 PRECEDING AND CURRENT ROW)` for rolling correlation
-   
-   Identify "rate-sensitive" sectors (negative beta: Utilities, Real Estate, REITs) vs "rate-insensitive" sectors (Financials benefit from higher rates). Compare: do sector sensitivities change across different rate regimes (rising vs falling rates)?
+3. **Rate Sensitivity by Sector (Duration Proxy):** Calculates rolling 2-year beta of sector returns against 10-year Treasury yield changes. Uses weekly sector returns aggregated from constituent stocks (market-cap weighted where available, equal-weighted otherwise) and `CORR(sector_return, yield_change) OVER (PARTITION BY sector ORDER BY week ROWS BETWEEN 103 PRECEDING AND CURRENT ROW)`. Identifies rate-sensitive sectors (negative beta: Utilities, Real Estate, REITs) versus rate-insensitive sectors (Financials benefit from higher rates). Compares whether sector sensitivities change across different rate regimes.
