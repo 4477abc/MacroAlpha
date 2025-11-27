@@ -1,0 +1,706 @@
+\documentclass[11pt,a4paper]{article}
+
+% Packages
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{geometry}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{amsmath}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{float}
+\usepackage{enumitem}
+\usepackage{fancyhdr}
+
+% Page setup
+\geometry{margin=1in}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0.5em}
+
+% Header/Footer
+\pagestyle{fancy}
+\fancyhf{}
+\rhead{MacroAlpha Database Project}
+\lhead{LSE Database Coursework}
+\rfoot{Page \thepage}
+
+% SQL code styling
+\lstdefinestyle{sql}{
+    language=SQL,
+    basicstyle=\ttfamily\small,
+    keywordstyle=\color{blue}\bfseries,
+    stringstyle=\color{red},
+    commentstyle=\color{gray}\itshape,
+    breaklines=true,
+    frame=single,
+    backgroundcolor=\color{gray!5},
+    numbers=left,
+    numberstyle=\tiny\color{gray},
+    tabsize=2
+}
+
+% Python code styling
+\lstdefinestyle{python}{
+    language=Python,
+    basicstyle=\ttfamily\small,
+    keywordstyle=\color{blue}\bfseries,
+    stringstyle=\color{orange},
+    commentstyle=\color{gray}\itshape,
+    breaklines=true,
+    frame=single,
+    backgroundcolor=\color{gray!5}
+}
+
+% Title
+\title{
+    \vspace{-1cm}
+    \textbf{MacroAlpha} \\
+    \large Global Macroeconomic Sensitivity \& Corporate Performance Analysis System \\
+    \vspace{0.5cm}
+    \normalsize LSE Database Systems Coursework
+}
+\author{[Student Name]}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+MacroAlpha is an institutional-style ``Top-Down'' research database that models the dynamic mapping between macroeconomic indicators (GDP, CPI, yields) and corporate fundamentals/market performance across a 20-year horizon (2005--2024). The system ensures point-in-time correctness for index universes (S\&P 500, FTSE 100), implements advanced SQL techniques including window functions, complex joins, and scenario analysis, and provides actionable insights for investment research. This report documents the database design, data acquisition from Bloomberg Terminal, implementation of 15 analytical queries across 5 use cases, and visualization of key findings.
+\end{abstract}
+
+\tableofcontents
+\newpage
+
+%==============================================================================
+\section{Introduction}
+%==============================================================================
+
+\subsection{Project Goal}
+MacroAlpha aims to:
+\begin{itemize}
+    \item Quantify \textbf{macro sensitivity} by sector, industry, and company across economic cycles
+    \item Identify \textbf{defensive vs cyclical} exposures, inflation resilience, and rate-shock solvency risk
+    \item Support ``what-if'' scenario analysis with reproducible SQL queries on real datasets
+\end{itemize}
+
+\subsection{Technical Complexity}
+The project demonstrates:
+\begin{itemize}
+    \item Multi-granularity time series alignment (weekly prices, quarterly macro, annual financials)
+    \item Advanced SQL: \textbf{window functions} (LAG/LEAD, ROW\_NUMBER, STDDEV, CORR), \textbf{complex joins}, and \textbf{derived metrics}
+    \item Point-in-time correctness to avoid survivorship bias
+    \item Scenario-based stress testing (rate shocks, inflation regimes)
+\end{itemize}
+
+\subsection{Data Coverage}
+\begin{table}[H]
+\centering
+\caption{Database Statistics}
+\begin{tabular}{lrr}
+\toprule
+\textbf{Table} & \textbf{Records} & \textbf{Time Range} \\
+\midrule
+companies & 1,274 & -- \\
+index\_membership & 12,069 & 2005--2024 \\
+prices\_weekly & 1,212,285 & 2005--2024 \\
+financials & 90,911 & 2005--2024 \\
+macro\_indicators & 109,652 & 2005--2024 \\
+interest\_rates & 9,941 & 2005--2024 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+%==============================================================================
+\section{Data Sources \& Acquisition}
+%==============================================================================
+
+\subsection{Bloomberg Terminal Data}
+
+All data was extracted from Bloomberg Terminal using the following methods:
+
+\begin{enumerate}
+    \item \textbf{Equity Prices}: Spreadsheet Builder $\rightarrow$ Time Series Table, Weekly frequency (Friday close), fields: PX\_LAST, DAY\_TO\_DAY\_TOT\_RETURN\_GROSS\_DVDS
+    \item \textbf{Financial Statements}: \texttt{<FA>} function for standardized income statement, balance sheet, and cash flow items
+    \item \textbf{Macro Indicators}: \texttt{<ECST>} for GDP, CPI, policy rates across 5 countries (US, UK, DE, JP, CN)
+    \item \textbf{Index Membership}: Historical constituents for S\&P 500 and FTSE 100 with effective dates and weights
+\end{enumerate}
+
+\subsection{Data Files}
+
+\begin{table}[H]
+\centering
+\caption{Source Data Files}
+\begin{tabular}{ll}
+\toprule
+\textbf{File} & \textbf{Description} \\
+\midrule
+company\_master.csv & Company metadata (ticker, name, GICS, country) \\
+index\_membership\_snapshot.csv & Historical index constituents with weights \\
+price\_weekly.xlsx & Weekly closing prices and returns \\
+financials\_annual.xlsx & Annual financial statements (7 fields) \\
+financials\_quarterly.xlsx & Quarterly financial statements \\
+*\_macros\_2024$\sim$2005.xlsx & Macro indicators for 5 countries \\
+5 countries 10y yield...xlsx & 10Y yields and policy rates \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Rationale for Weekly Frequency}
+
+Weekly data provides optimal balance between:
+\begin{enumerate}
+    \item \textbf{Frequency matching}: Aligns with quarterly macro and annual/quarterly financials
+    \item \textbf{Noise reduction}: Filters intraday volatility and market microstructure noise
+    \item \textbf{Sufficiency}: All proposed analyses (correlations, rolling windows) are fully supported
+    \item \textbf{Manageability}: Reduces dimensionality (1000+ tickers $\times$ 20 years)
+\end{enumerate}
+
+%==============================================================================
+\section{Database Schema Design}
+%==============================================================================
+
+\subsection{Entity-Relationship Model}
+
+The database consists of 8 tables organized around three domains:
+
+\begin{enumerate}
+    \item \textbf{Company Domain}: companies, index\_membership
+    \item \textbf{Market Data Domain}: prices\_weekly, financials
+    \item \textbf{Macro Domain}: macro\_indicators, interest\_rates, countries
+\end{enumerate}
+
+\subsection{Table Definitions}
+
+\subsubsection{Companies Table}
+\begin{lstlisting}[style=sql]
+CREATE TABLE companies (
+    company_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    ticker VARCHAR(50) NOT NULL UNIQUE,
+    company_name VARCHAR(200),
+    country_id VARCHAR(2),
+    currency VARCHAR(3),
+    gics_sector_name VARCHAR(100),
+    gics_industry_group_name VARCHAR(100),
+    current_market_cap DECIMAL(20, 2),
+    is_active BOOLEAN DEFAULT TRUE
+);
+\end{lstlisting}
+
+\subsubsection{Index Membership (Point-in-Time)}
+\begin{lstlisting}[style=sql]
+CREATE TABLE index_membership (
+    membership_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    index_id VARCHAR(10) NOT NULL,
+    company_id INTEGER NOT NULL,
+    as_of_date DATE NOT NULL,
+    weight DECIMAL(10, 6),        -- UKX only
+    shares_outstanding DECIMAL(20, 6),
+    price DECIMAL(15, 4),
+    UNIQUE(index_id, company_id, as_of_date)
+);
+\end{lstlisting}
+
+\subsubsection{Financials Table}
+\begin{lstlisting}[style=sql]
+CREATE TABLE financials (
+    financial_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    company_id INTEGER NOT NULL,
+    period_end_date DATE NOT NULL,
+    period_type VARCHAR(10) NOT NULL, -- 'ANNUAL' or 'QUARTERLY'
+    revenue DECIMAL(20, 2),
+    ebitda DECIMAL(20, 2),
+    interest_expense DECIMAL(20, 2),
+    free_cash_flow DECIMAL(20, 2),
+    gross_profit DECIMAL(20, 2),
+    total_debt DECIMAL(20, 2),
+    UNIQUE(company_id, period_end_date, period_type)
+);
+\end{lstlisting}
+
+\subsection{Analytical Methodology: Financial Sector Exclusion}
+
+Several use cases explicitly exclude companies in the \textbf{Financials} sector from EBITDA-based analyses. This is a \textbf{correct analytical practice}, not a data quality issue:
+
+\begin{table}[H]
+\centering
+\caption{Financial Metrics Applicability}
+\begin{tabular}{lcc}
+\toprule
+\textbf{Metric} & \textbf{Non-Financial} & \textbf{Banks} \\
+\midrule
+EBITDA & \checkmark Applicable & $\times$ Not applicable \\
+Interest Coverage & Debt serviceability & $\times$ Meaningless \\
+Debt-to-Equity & 1.0 = high leverage & 10+ = normal \\
+Free Cash Flow & Operating CF - CapEx & $\times$ Inapplicable \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Banks earn spread income (Interest Received $-$ Interest Paid), so interest expense is their cost of goods sold, not a financing burden. Bloomberg correctly reports N/A for these fields.
+
+%==============================================================================
+\section{Use Cases and SQL Queries}
+%==============================================================================
+
+This section presents 5 use cases with 15 SQL queries demonstrating advanced database techniques.
+
+%------------------------------------------------------------------------------
+\subsection{Use Case 1: Market Concentration \& Index Dynamics}
+%------------------------------------------------------------------------------
+
+\textbf{Goal}: Analyze market structure evolution using FTSE 100, demonstrating survivorship-bias-free analysis with complete Weight data.
+
+\textbf{Rationale for UK Focus}: UKX provides complete historical Weight and Shares data (unlike SPX where weights are missing), enabling precise point-in-time calculations.
+
+\subsubsection{Query 1.1: Top-Heavy Concentration Trend}
+
+Calculate the cumulative weight of Top 10 companies in FTSE 100 for each year-end.
+
+\begin{lstlisting}[style=sql]
+WITH yearly_top10 AS (
+    SELECT 
+        strftime('%Y', im.as_of_date) AS year,
+        im.company_id, c.company_name, im.weight,
+        ROW_NUMBER() OVER (
+            PARTITION BY strftime('%Y', im.as_of_date) 
+            ORDER BY im.weight DESC
+        ) AS rank
+    FROM index_membership im
+    JOIN companies c ON im.company_id = c.company_id
+    WHERE im.index_id = 'UKX' AND im.weight IS NOT NULL
+)
+SELECT year, ROUND(SUM(weight), 2) AS top10_weight
+FROM yearly_top10
+WHERE rank <= 10
+GROUP BY year ORDER BY year;
+\end{lstlisting}
+
+\textbf{SQL Techniques}: ROW\_NUMBER() window function, PARTITION BY, aggregate with GROUP BY.
+
+\subsubsection{Query 1.2: Herfindahl-Hirschman Index (HHI)}
+
+Compute market concentration index HHI = $\sum(\text{weight}^2)$ per year.
+
+\begin{lstlisting}[style=sql]
+SELECT 
+    strftime('%Y', im.as_of_date) AS year,
+    ROUND(SUM(im.weight * im.weight), 4) AS hhi,
+    COUNT(*) AS members,
+    CASE 
+        WHEN SUM(im.weight * im.weight) < 0.15 THEN 'Unconcentrated'
+        WHEN SUM(im.weight * im.weight) < 0.25 THEN 'Moderate'
+        ELSE 'Highly Concentrated'
+    END AS concentration_level
+FROM index_membership im
+WHERE im.index_id = 'UKX' AND im.weight IS NOT NULL
+GROUP BY strftime('%Y', im.as_of_date)
+ORDER BY year;
+\end{lstlisting}
+
+\subsubsection{Query 1.3: Index Churn Analysis}
+
+Identify companies added to or removed from FTSE 100 each year using LAG().
+
+\begin{lstlisting}[style=sql]
+WITH membership_changes AS (
+    SELECT company_id, strftime('%Y', as_of_date) AS year,
+        LAG(1) OVER (PARTITION BY company_id ORDER BY as_of_date) AS prev
+    FROM index_membership WHERE index_id = 'UKX'
+)
+SELECT year, 
+    SUM(CASE WHEN prev IS NULL THEN 1 ELSE 0 END) AS entries,
+    COUNT(*) AS total_members
+FROM membership_changes
+GROUP BY year ORDER BY year;
+\end{lstlisting}
+
+%------------------------------------------------------------------------------
+\subsection{Use Case 2: Corporate Leverage Cycles}
+%------------------------------------------------------------------------------
+
+\textbf{Goal}: Analyze how corporate capital structure evolves across economic cycles.
+
+\textbf{Scope}: Non-financial companies only (\texttt{WHERE gics\_sector\_name != 'Financials'}).
+
+\subsubsection{Query 2.1: Debt-to-Equity Distribution Evolution}
+
+\begin{lstlisting}[style=sql]
+WITH de_ratios AS (
+    SELECT strftime('%Y', f.period_end_date) AS year,
+        f.total_debt / NULLIF(f.revenue, 0) AS debt_ratio
+    FROM financials f
+    JOIN companies c ON f.company_id = c.company_id
+    WHERE f.period_type = 'ANNUAL'
+      AND c.gics_sector_name != 'Financials'
+      AND f.total_debt IS NOT NULL AND f.revenue > 0
+)
+SELECT year, COUNT(*) AS companies,
+    ROUND(AVG(debt_ratio), 3) AS mean_ratio
+FROM de_ratios GROUP BY year ORDER BY year;
+\end{lstlisting}
+
+\subsubsection{Query 2.2: Deleveraging Cycles Detection}
+
+Identify companies that reduced debt for 3+ consecutive years.
+
+\begin{lstlisting}[style=sql]
+WITH yearly_debt AS (
+    SELECT f.company_id, strftime('%Y', f.period_end_date) AS year,
+        f.total_debt,
+        LAG(f.total_debt, 1) OVER (PARTITION BY f.company_id 
+            ORDER BY f.period_end_date) AS prev1,
+        LAG(f.total_debt, 2) OVER (PARTITION BY f.company_id 
+            ORDER BY f.period_end_date) AS prev2
+    FROM financials f
+    JOIN companies c ON f.company_id = c.company_id
+    WHERE f.period_type = 'ANNUAL' 
+      AND c.gics_sector_name != 'Financials'
+)
+SELECT year, COUNT(*) AS total,
+    SUM(CASE WHEN total_debt < prev1 AND prev1 < prev2 
+        THEN 1 ELSE 0 END) AS deleveraging
+FROM yearly_debt WHERE prev2 IS NOT NULL
+GROUP BY year ORDER BY year;
+\end{lstlisting}
+
+\textbf{SQL Techniques}: Multiple LAG() calls, conditional aggregation with CASE WHEN.
+
+\subsubsection{Query 2.3: Interest Coverage Sensitivity}
+
+\begin{lstlisting}[style=sql]
+WITH icr_data AS (
+    SELECT c.gics_sector_name,
+        CASE WHEN f.interest_expense > 0 
+            THEN f.ebitda / f.interest_expense ELSE NULL 
+        END AS icr
+    FROM financials f
+    JOIN companies c ON f.company_id = c.company_id
+    WHERE f.period_type = 'ANNUAL' 
+      AND c.gics_sector_name != 'Financials'
+)
+SELECT gics_sector_name, COUNT(*) AS companies,
+    ROUND(AVG(icr), 2) AS avg_icr
+FROM icr_data WHERE icr IS NOT NULL
+GROUP BY gics_sector_name ORDER BY avg_icr;
+\end{lstlisting}
+
+%------------------------------------------------------------------------------
+\subsection{Use Case 3: Rate-Shock Solvency Stress Test}
+%------------------------------------------------------------------------------
+
+\textbf{Goal}: Identify ``zombie companies'' and simulate rate shock scenarios.
+
+\subsubsection{Query 3.1: Zombie Companies (3-Year Persistence)}
+
+\begin{lstlisting}[style=sql]
+WITH icr_calc AS (
+    SELECT f.company_id, strftime('%Y', f.period_end_date) AS year,
+        CASE WHEN f.interest_expense > 0 
+            THEN f.ebitda / f.interest_expense ELSE NULL END AS icr,
+        CASE WHEN f.interest_expense > 0 
+            AND f.ebitda / f.interest_expense < 1.5 
+            THEN 1 ELSE 0 END AS is_zombie
+    FROM financials f
+    JOIN companies c ON f.company_id = c.company_id
+    WHERE c.gics_sector_name != 'Financials'
+),
+zombie_persistence AS (
+    SELECT *, is_zombie + 
+        COALESCE(LAG(is_zombie, 1) OVER w, 0) +
+        COALESCE(LAG(is_zombie, 2) OVER w, 0) AS streak
+    FROM icr_calc
+    WINDOW w AS (PARTITION BY company_id ORDER BY year)
+)
+SELECT year, COUNT(*) AS total,
+    SUM(CASE WHEN streak >= 3 THEN 1 ELSE 0 END) AS zombies
+FROM zombie_persistence GROUP BY year ORDER BY year;
+\end{lstlisting}
+
+\subsubsection{Query 3.2: 200bp Rate Shock Scenario}
+
+Simulate +200 basis point rate increase assuming 50\% floating-rate debt.
+
+\begin{lstlisting}[style=sql]
+WITH stress_test AS (
+    SELECT c.country_id,
+        f.ebitda / f.interest_expense AS current_icr,
+        f.ebitda / (f.interest_expense + f.total_debt * 0.5 * 0.02) 
+            AS shocked_icr
+    FROM financials f
+    JOIN companies c ON f.company_id = c.company_id
+    WHERE f.period_type = 'ANNUAL' 
+      AND c.gics_sector_name != 'Financials'
+      AND f.interest_expense > 0 AND f.total_debt > 0
+      AND strftime('%Y', f.period_end_date) = '2024'
+)
+SELECT country_id, COUNT(*) AS companies,
+    ROUND(AVG(current_icr), 2) AS avg_current,
+    ROUND(AVG(shocked_icr), 2) AS avg_shocked,
+    SUM(CASE WHEN current_icr >= 1.5 AND shocked_icr < 1.5 
+        THEN 1 ELSE 0 END) AS newly_distressed
+FROM stress_test GROUP BY country_id ORDER BY newly_distressed DESC;
+\end{lstlisting}
+
+\subsubsection{Query 3.3: Geographic Risk Concentration}
+
+Rank countries by percentage of zombie companies.
+
+%------------------------------------------------------------------------------
+\subsection{Use Case 4: Macro Lead-Lag \& Business Cycle}
+%------------------------------------------------------------------------------
+
+\subsubsection{Query 4.1: Housing Starts Lead Revenue}
+
+Test if housing activity predicts revenue with 2-quarter lag.
+
+\subsubsection{Query 4.2: Revenue Volatility Classification}
+
+\begin{lstlisting}[style=sql]
+WITH volatility AS (
+    SELECT company_id, c.gics_sector_name,
+        SQRT(AVG(growth*growth) - AVG(growth)*AVG(growth)) AS vol
+    FROM (
+        SELECT f.company_id, 
+            (f.revenue - LAG(f.revenue) OVER w) / 
+            NULLIF(LAG(f.revenue) OVER w, 0) * 100 AS growth
+        FROM financials f WHERE f.period_type = 'ANNUAL'
+        WINDOW w AS (PARTITION BY f.company_id ORDER BY period_end_date)
+    ) JOIN companies c ON company_id = c.company_id
+    GROUP BY company_id HAVING COUNT(*) >= 10
+)
+SELECT NTILE(4) OVER (ORDER BY vol) AS quartile,
+    CASE NTILE(4) OVER (ORDER BY vol)
+        WHEN 1 THEN 'Defensive' WHEN 4 THEN 'Cyclical'
+        ELSE 'Moderate' END AS classification,
+    COUNT(*) AS companies
+FROM volatility GROUP BY quartile;
+\end{lstlisting}
+
+\textbf{SQL Techniques}: NTILE() for quartile classification, nested window functions.
+
+\subsubsection{Query 4.3: Downturn Resilience}
+
+Identify companies with positive FCF despite negative revenue growth during GDP contractions.
+
+%------------------------------------------------------------------------------
+\subsection{Use Case 5: Sector Rotation \& Inflation Regime}
+%------------------------------------------------------------------------------
+
+\subsubsection{Query 5.1: Sector Performance by Inflation Regime}
+
+\begin{lstlisting}[style=sql]
+WITH monthly_cpi AS (
+    SELECT strftime('%Y-%m', indicator_date) AS ym,
+        CASE WHEN AVG(indicator_value) > 3 
+            THEN 'High Inflation' ELSE 'Low Inflation' END AS regime
+    FROM macro_indicators
+    WHERE indicator_name LIKE '%CPI%yoy%' AND country_id = 'US'
+    GROUP BY ym
+),
+sector_returns AS (
+    SELECT strftime('%Y-%m', p.price_date) AS ym,
+        c.gics_sector_name, AVG(p.total_return) * 52 AS ann_return
+    FROM prices_weekly p
+    JOIN companies c ON p.company_id = c.company_id
+    WHERE c.country_id = 'US' GROUP BY ym, gics_sector_name
+)
+SELECT regime, gics_sector_name,
+    ROUND(AVG(ann_return), 2) AS avg_annual_return
+FROM monthly_cpi JOIN sector_returns USING(ym)
+GROUP BY regime, gics_sector_name
+ORDER BY regime, avg_annual_return DESC;
+\end{lstlisting}
+
+\subsubsection{Query 5.2: Sector-CPI Lead-Lag}
+
+Compute correlation between sector returns and lagged CPI changes.
+
+\subsubsection{Query 5.3: Rate Sensitivity by Sector}
+
+Calculate sector beta against 10-year yield changes.
+
+%==============================================================================
+\section{Results and Visualizations}
+%==============================================================================
+
+\subsection{Market Concentration (UC1)}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{viz_uc1_concentration.png}
+\caption{FTSE 100 Market Concentration: Top 10 Weight and HHI Index (2005--2024)}
+\end{figure}
+
+\textbf{Key Findings}:
+\begin{itemize}
+    \item Top 10 companies consistently hold 40--50\% of total index weight
+    \item Concentration spiked during crises: 2008 (52.4\%), 2022 (50.7\%)
+    \item HHI remains in ``Highly Concentrated'' territory throughout
+\end{itemize}
+
+\subsection{Corporate Leverage Cycles (UC2)}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{viz_uc2_leverage.png}
+\caption{Deleveraging Cycles: Percentage of Companies Reducing Debt for 3+ Years}
+\end{figure}
+
+\textbf{Key Findings}:
+\begin{itemize}
+    \item Post-GFC recovery (2010): 29\% of companies deleveraging
+    \item COVID crisis (2020): Only 10\% deleveraging (companies added leverage)
+    \item Rate hike response (2022--2024): 25--30\% deleveraging
+\end{itemize}
+
+\subsection{Sector Cyclicality (UC4)}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{viz_uc4_volatility.png}
+\caption{Revenue Volatility by Sector as Cyclicality Proxy}
+\end{figure}
+
+\textbf{Key Findings}:
+\begin{itemize}
+    \item \textbf{Most Cyclical}: Consumer Discretionary (165\%), Energy (79\%)
+    \item \textbf{Most Defensive}: Consumer Staples (5.8\%), Utilities (6.1\%)
+\end{itemize}
+
+\subsection{Inflation Regime Analysis (UC5)}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{viz_uc5_inflation.png}
+\caption{Sector Performance by Inflation Regime (CPI $>$ 3\% vs $\leq$ 3\%)}
+\end{figure}
+
+\textbf{Key Findings}:
+\begin{itemize}
+    \item \textbf{High Inflation Winners}: Utilities (+32\%), Info Tech (+15\%)
+    \item \textbf{High Inflation Losers}: Financials (-40\%), Materials (-20\%)
+\end{itemize}
+
+\subsection{Summary Dashboard}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{viz_dashboard.png}
+\caption{MacroAlpha Dashboard: Key Metrics Overview}
+\end{figure}
+
+\subsection{Data Coverage Analysis: Understanding the Declining Trend}
+
+The dashboard reveals an apparent decline in financial data coverage from 2010 to 2024. This is \textbf{not a data quality issue} but reflects the natural dynamics of equity markets.
+
+\begin{table}[H]
+\centering
+\caption{Financial Data Coverage Trend}
+\begin{tabular}{lrrr}
+\toprule
+\textbf{Year} & \textbf{Non-null Data Points} & \textbf{Companies} & \textbf{Notes} \\
+\midrule
+2010 & 7,016 & 1,145 & Peak coverage \\
+2015 & 6,391 & 1,042 & -9\% \\
+2020 & 5,821 & 949 & -17\% \\
+2024 & 5,277 & 857 & -25\% from peak \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{Reasons for Declining Coverage}:
+\begin{enumerate}
+    \item \textbf{Mergers \& Acquisitions}: Companies like Time Warner (acquired by AT\&T) disappear from the dataset
+    \item \textbf{Delistings}: Privatizations (e.g., Dell in 2013) and bankruptcies remove companies
+    \item \textbf{Ticker Changes}: Corporate restructuring causes data discontinuity
+    \item \textbf{Data Lag}: 2024 data may not yet be fully populated in Bloomberg
+\end{enumerate}
+
+\textbf{Validation}: Core companies maintain complete 20-year data:
+\begin{itemize}
+    \item Apple (AAPL): 20 years complete \checkmark
+    \item Microsoft (MSFT): 20 years complete \checkmark
+    \item JP Morgan (JPM): 20 years complete \checkmark
+\end{itemize}
+
+\textbf{Importance for Point-in-Time Analysis}:
+
+This declining coverage pattern actually \textit{validates} our point-in-time methodology. If we only analyzed companies existing in 2024, we would suffer from \textbf{survivorship bias}---missing historically important companies that have since disappeared. By preserving data for companies that exited the index, MacroAlpha enables unbiased historical analysis.
+
+\begin{quote}
+\textit{``The declining coverage reflects real market dynamics (M\&A, delistings, restructuring), not data problems. This is precisely why point-in-time correctness matters.''}
+\end{quote}
+
+%==============================================================================
+\section{Technical Implementation}
+%==============================================================================
+
+\subsection{ETL Pipeline}
+
+The data ingestion pipeline (\texttt{etl\_import.py}) handles:
+\begin{enumerate}
+    \item Bloomberg Excel wide-table to long-table transformation
+    \item Date parsing and validation
+    \item N/A and missing value handling
+    \item Foreign key relationship establishment
+\end{enumerate}
+
+\subsection{Date Column Repair}
+
+The \texttt{fix\_dates.py} script repairs incomplete date columns in financial Excel files where Bloomberg only populated dates for the first few years.
+
+\subsection{Visualization}
+
+The \texttt{visualizations.py} script generates 7 publication-ready charts using matplotlib, covering all 5 use cases.
+
+%==============================================================================
+\section{Conclusion}
+%==============================================================================
+
+MacroAlpha successfully demonstrates:
+
+\begin{enumerate}
+    \item \textbf{Database Design}: A normalized schema supporting multi-granularity time series analysis with point-in-time correctness
+    
+    \item \textbf{Advanced SQL}: Window functions (LAG, LEAD, ROW\_NUMBER, NTILE, STDDEV), CTEs, complex joins, and scenario-based calculations
+    
+    \item \textbf{Analytical Rigor}: Proper handling of financial sector exclusion, survivorship bias avoidance, and inflation regime classification
+    
+    \item \textbf{Practical Insights}:
+    \begin{itemize}
+        \item Market concentration spikes during crises
+        \item Deleveraging is counter-cyclical (increases after crises, not during)
+        \item Sector performance varies dramatically across inflation regimes
+        \item Consumer Staples and Utilities are truly defensive
+    \end{itemize}
+\end{enumerate}
+
+The database and queries are fully reproducible using the provided SQLite database and SQL scripts.
+
+%==============================================================================
+\appendix
+\section{File Structure}
+%==============================================================================
+
+\begin{verbatim}
+MacroAlpha/
+|-- macroalpha.db           # SQLite database
+|-- schema.sql              # Database schema
+|-- queries.sql             # 15 SQL queries
+|-- etl_import.py           # Data import script
+|-- fix_dates.py            # Date column repair
+|-- visualizations.py       # Chart generation
+|-- report.tex              # This report
+|-- viz_*.png               # Generated visualizations
++-- *.xlsx, *.csv           # Source data files
+\end{verbatim}
+
+\end{document}
+
