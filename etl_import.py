@@ -7,7 +7,7 @@ Converts Bloomberg Excel exports to SQLite database.
 Data Sources:
 - company_master.csv          → companies table
 - index_membership_snapshot.csv → index_membership table
-- price_weekly.xlsx.xlsx      → prices_weekly table
+- price_weekly.xlsx      → prices_weekly table
 - financials_annual.xlsx      → financials table (period_type='ANNUAL')
 - financials_quarterly.xlsx   → financials table (period_type='QUARTERLY')
 - usa/uk/de/jp/cn_macros_*.xlsx → macro_indicators table
@@ -188,10 +188,10 @@ def import_index_membership(conn, ticker_to_id):
 # ============================================================================
 
 def import_prices_weekly(conn, ticker_to_id):
-    """Import price_weekly.xlsx.xlsx → prices_weekly table."""
+    """Import price_weekly.xlsx → prices_weekly table."""
     print("\n📈 Importing weekly prices...")
     
-    df = pd.read_excel(DATA_DIR / "price_weekly.xlsx.xlsx", header=None)
+    df = pd.read_excel(DATA_DIR / "price_weekly.xlsx", header=None)
     
     # Structure:
     # Row 3: Tickers (every other column: 1, 3, 5, ...)

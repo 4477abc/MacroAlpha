@@ -18,46 +18,7 @@ Technical implementation handles multi-granularity time series (weekly prices, q
 
 ## Data Sources & Acquisition Strategy (Bloomberg Terminal)
 
-Data was extracted from Bloomberg Terminal and exported to cleaned CSV/Excel files. The following files populate the database:
-
-### Data Source Files (with GitHub Links)
-
-#### 1) Company Master Data
-Company master file with ticker, name, country, currency, GICS classification, and market capitalization.
-* Source: [`company_master.csv`](https://github.com/4477abc/MacroAlpha/blob/main/company_master.csv) → `companies` table
-
-#### 2) Index Membership (Point-in-Time)
-Historical membership data for S&P 500 and FTSE 100 with effective dates and weights. This file consolidates year-end snapshots (SPX/UKX as of Dec 31 YYYY.xlsx) to enable point-in-time analysis and avoid survivorship bias.
-* Source: [`index_membership_snapshot.csv`](https://github.com/4477abc/MacroAlpha/blob/main/index_membership_snapshot.csv) → `index_membership` table
-
-#### 3) Equity Price Data
-Weekly closing prices and total returns for constituent equities. Weekly frequency balances frequency matching (aligns with quarterly macro and annual/quarterly financials), noise reduction (filters intraday volatility), analytical sufficiency (supports correlations, beta, rolling windows), and data manageability (critical for 1000+ tickers over 20 years).
-* Source: [`price_weekly.xlsx.xlsx`](https://github.com/4477abc/MacroAlpha/blob/main/price_weekly.xlsx.xlsx) → `prices_weekly` table
-
-#### 4) Corporate Financials
-Standardized income statement, balance sheet, and cash flow items extracted via Bloomberg Spreadsheet Builder:
-- **Revenue** (`SALES_REV_TURN`) - Total sales after returns, allowances, discounts, and sales-based taxes
-- **EBITDA** (`EBITDA`) - Earnings Before Interest, Taxes, Depreciation, and Amortization
-- **Interest Expense** (`IS_INT_EXPENSE`) - Interest expense reported in income statement
-- **Total Debt** (`SHORT_AND_LONG_TERM_DEBT`) - Sum of short-term and long-term debt obligations
-- **Free Cash Flow** (`CF_FREE_CASH_FLOW`) - Operating cash flow minus capital spending
-- **Gross Profit** (`GROSS_PROFIT`) - Gross profit from operations
-- **COGS** (`ARD_COST_OF_GOODS_SOLD`) - Cost of Goods Sold from Annual Report Data (ARD = unadjusted company-reported figures)
-
-* Annual: [`financials_annual.xlsx`](https://github.com/4477abc/MacroAlpha/blob/main/financials_annual.xlsx) → `financials` table (period_type='ANNUAL')
-* Quarterly: [`financials_quarterly.xlsx`](https://github.com/4477abc/MacroAlpha/blob/main/financials_quarterly.xlsx) → `financials` table (period_type='QUARTERLY')
-
-#### 5) Macroeconomic Indicators
-GDP, CPI, employment, housing starts, and other economic indicators extracted via Bloomberg `<ECST>` function for five countries:
-* US: [`usa_macros_2024~2005.xlsx`](https://github.com/4477abc/MacroAlpha/blob/main/usa_macros_2024~2005.xlsx) → `macro_indicators` (country_id='US')
-* UK: [`uk_macros_2024~2005.xlsx`](https://github.com/4477abc/MacroAlpha/blob/main/uk_macros_2024~2005.xlsx) → `macro_indicators` (country_id='GB')
-* Germany: [`de_macros_2024~2005.xlsx`](https://github.com/4477abc/MacroAlpha/blob/main/de_macros_2024~2005.xlsx) → `macro_indicators` (country_id='DE')
-* Japan: [`jp_macros_2024~2005.xlsx`](https://github.com/4477abc/MacroAlpha/blob/main/jp_macros_2024~2005.xlsx) → `macro_indicators` (country_id='JP')
-* China: [`cn_macros_2024~2005.xlsx`](https://github.com/4477abc/MacroAlpha/blob/main/cn_macros_2024~2005.xlsx) → `macro_indicators` (country_id='CN')
-
-#### 6) Interest Rates
-Government bond yields and central bank policy rates for five countries (US, UK, DE, JP, CN).
-* Source: [`5 countries 10y yield and policy rate.xlsx`](https://github.com/4477abc/MacroAlpha/blob/main/5%20countries%2010y%20yield%20and%20policy%20rate.xlsx) → `interest_rates` table
+Data was extracted from Bloomberg Terminal and exported to cleaned CSV/Excel files. The following section describes the extraction process and resulting data source files.
 
 ### Bloomberg Terminal Extraction Process
 
@@ -71,6 +32,8 @@ Data extraction used Bloomberg's Spreadsheet Builder with Time Series Table form
 - Or use menu: `Excel` → `Bloomberg` → `Spreadsheet Builder`
 
 **2. Equity Price Data (Weekly)**
+- **Data Source:** Weekly closing prices and total returns for constituent equities. Weekly frequency balances frequency matching (aligns with quarterly macro and annual/quarterly financials), noise reduction (filters intraday volatility), analytical sufficiency (supports correlations, beta, rolling windows), and data manageability (critical for 1000+ tickers over 20 years).
+- **Source File:** [`price_weekly.xlsx`](https://github.com/4477abc/MacroAlpha/blob/main/price_weekly.xlsx) → `prices_weekly` table
 - **Tool:** Spreadsheet Builder → `Time Series Table`
 - **Tickers:** Enter ticker list (batch 100-200 tickers per request)
 - **Fields:** 
@@ -78,10 +41,21 @@ Data extraction used Bloomberg's Spreadsheet Builder with Time Series Table form
   - `DAY_TO_DAY_TOT_RETURN_GROSS_DVDS` (Total Return)
 - **Frequency:** Weekly (Friday close)
 - **Date Range:** 2005-01-01 to 2024-12-31
-- **Export:** Save as Excel file (`price_weekly.xlsx.xlsx`)
+- **Export:** Save as Excel file (`price_weekly.xlsx`)
 - **Note:** Bloomberg exports in wide-table format (tickers as columns, dates as rows)
 
 **3. Financial Statements (Annual/Quarterly)**
+- **Data Source:** Standardized income statement, balance sheet, and cash flow items extracted via Bloomberg Spreadsheet Builder:
+  - **Revenue** (`SALES_REV_TURN`) - Total sales after returns, allowances, discounts, and sales-based taxes
+  - **EBITDA** (`EBITDA`) - Earnings Before Interest, Taxes, Depreciation, and Amortization
+  - **Interest Expense** (`IS_INT_EXPENSE`) - Interest expense reported in income statement
+  - **Total Debt** (`SHORT_AND_LONG_TERM_DEBT`) - Sum of short-term and long-term debt obligations
+  - **Free Cash Flow** (`CF_FREE_CASH_FLOW`) - Operating cash flow minus capital spending
+  - **Gross Profit** (`GROSS_PROFIT`) - Gross profit from operations
+  - **COGS** (`ARD_COST_OF_GOODS_SOLD`) - Cost of Goods Sold from Annual Report Data (ARD = unadjusted company-reported figures)
+- **Source Files:** 
+  - Annual: [`financials_annual.xlsx`](https://github.com/4477abc/MacroAlpha/blob/main/financials_annual.xlsx) → `financials` table (period_type='ANNUAL')
+  - Quarterly: [`financials_quarterly.xlsx`](https://github.com/4477abc/MacroAlpha/blob/main/financials_quarterly.xlsx) → `financials` table (period_type='QUARTERLY')
 - **Tool:** Spreadsheet Builder → `Time Series Table`
 - **Tickers:** Enter ticker list
 - **Fields:** Select the following fundamental data fields:
@@ -99,6 +73,12 @@ Data extraction used Bloomberg's Spreadsheet Builder with Time Series Table form
 - **Note:** Financial companies (banks) may show N/A for EBITDA and Interest Coverage fields—this is expected and correct.
 
 **4. Macroeconomic Indicators**
+- **Data Source:** GDP, CPI, employment, housing starts, and other economic indicators extracted via Bloomberg `<ECST>` function for five countries:
+  - US: [`usa_macros_2024~2005.xlsx`](https://github.com/4477abc/MacroAlpha/blob/main/usa_macros_2024~2005.xlsx) → `macro_indicators` (country_id='US')
+  - UK: [`uk_macros_2024~2005.xlsx`](https://github.com/4477abc/MacroAlpha/blob/main/uk_macros_2024~2005.xlsx) → `macro_indicators` (country_id='GB')
+  - Germany: [`de_macros_2024~2005.xlsx`](https://github.com/4477abc/MacroAlpha/blob/main/de_macros_2024~2005.xlsx) → `macro_indicators` (country_id='DE')
+  - Japan: [`jp_macros_2024~2005.xlsx`](https://github.com/4477abc/MacroAlpha/blob/main/jp_macros_2024~2005.xlsx) → `macro_indicators` (country_id='JP')
+  - China: [`cn_macros_2024~2005.xlsx`](https://github.com/4477abc/MacroAlpha/blob/main/cn_macros_2024~2005.xlsx) → `macro_indicators` (country_id='CN')
 - **Tool:** Spreadsheet Builder → `Time Series Table`
 - **Country Tickers:** Use `<ECST>` function for economic statistics:
   - US: `USGDP Index`, `USCPI Index`, `USUNEMPL Index`, etc.
@@ -112,6 +92,8 @@ Data extraction used Bloomberg's Spreadsheet Builder with Time Series Table form
 - **Export:** Save as separate Excel files per country (`usa_macros_2024~2005.xlsx`, etc.)
 
 **5. Interest Rates**
+- **Data Source:** Government bond yields and central bank policy rates for five countries (US, UK, DE, JP, CN).
+- **Source File:** [`5 countries 10y yield and policy rate.xlsx`](https://github.com/4477abc/MacroAlpha/blob/main/5%20countries%2010y%20yield%20and%20policy%20rate.xlsx) → `interest_rates` table
 - **Tool:** Spreadsheet Builder → `Time Series Table`
 - **Tickers:**
   - 10Y Yields: `USGG10YR Index`, `GTGBP10Y Govt`, `GTDEM10Y Govt`, `GTJPY10Y Govt`, `GTCNY10Y Govt`
@@ -122,6 +104,8 @@ Data extraction used Bloomberg's Spreadsheet Builder with Time Series Table form
 - **Export:** Save as Excel file (`5 countries 10y yield and policy rate.xlsx`)
 
 **6. Index Membership (Historical Snapshots)**
+- **Data Source:** Historical membership data for S&P 500 and FTSE 100 with effective dates and weights. This file consolidates year-end snapshots (SPX/UKX as of Dec 31 YYYY.xlsx) to enable point-in-time analysis and avoid survivorship bias.
+- **Source File:** [`index_membership_snapshot.csv`](https://github.com/4477abc/MacroAlpha/blob/main/index_membership_snapshot.csv) → `index_membership` table
 - **Tool:** Terminal → `SPX Index MEMB <GO>` or `UKX Index MEMB <GO>`
 - **Method:**
   1. Type `SPX Index MEMB <GO>` (or `UKX Index MEMB <GO>` for FTSE 100)
@@ -132,6 +116,8 @@ Data extraction used Bloomberg's Spreadsheet Builder with Time Series Table form
 - **Post-Processing:** Use `combine_memb.py` to consolidate all 40 files into a single long table `index_membership_snapshot.csv` with columns: `index_id`, `as_of_date`, `ticker`, `weight`, etc.
 
 **7. Company Master Data**
+- **Data Source:** Company master file with ticker, name, country, currency, GICS classification, and market capitalization.
+- **Source File:** [`company_master.csv`](https://github.com/4477abc/MacroAlpha/blob/main/company_master.csv) → `companies` table
 - **Tool:** Spreadsheet Builder → `Company Information`
 - **Tickers:** Enter full ticker list
 - **Fields:**
