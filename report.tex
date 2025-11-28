@@ -260,7 +260,7 @@ Several use cases explicitly exclude companies in the \textbf{Financials} sector
 \midrule
 EBITDA & \checkmark Applicable & $\times$ Not applicable \\
 Interest Coverage & Debt serviceability & $\times$ Meaningless \\
-Debt-to-Equity & 1.0 = high leverage & 10+ = normal \\
+Debt-to-Revenue & 0.5 = moderate leverage & 2+ = high \\
 Free Cash Flow & Operating CF - CapEx & $\times$ Inapplicable \\
 \bottomrule
 \end{tabular}
@@ -327,7 +327,7 @@ GROUP BY year ORDER BY year;
 
 \textbf{Analysis:}
 
-HHI's quadratic weighting ($\sum w_i^2$) captures concentration more precisely than simple top-10 measures. The math is revealing: an HHI of 234 (2015) translates to roughly 4.3 effective equal-weighted positions, while 367 (2008) implies just 2.7. In other words, despite 100+ index members, the 2008 market structure behaved like a portfolio of fewer than three stocks.
+HHI's quadratic weighting ($\sum w_i^2$) captures concentration more precisely than simple top-10 measures. The math is revealing: an HHI of 234 (2015) translates to roughly 42.7 effective equal-weighted positions, while 367 (2008) implies just 27.3. In other words, despite 100+ index members, the 2008 market structure behaved like a portfolio of fewer than 30 stocks---roughly one-quarter of the index.
 
 The 2008 spike tells a familiar story: a handful of financial and energy giants dominated returns as the crisis unfolded. But the subsequent collapse to 234--240 by 2014--2015 is more interesting. This was the most competitive market structure in two decades, emerging after the European debt crisis resolution and before Brexit uncertainty. Stability and policy clarity, it seems, breed market dispersion.
 
@@ -397,7 +397,7 @@ GROUP BY year ORDER BY year;
 
 \textbf{Scope}: Non-financial companies only (\texttt{WHERE gics\_sector\_name != 'Financials'}).
 
-\subsubsection{Query 2.1: Debt-to-Equity Distribution Evolution}
+\subsubsection{Query 2.1: Debt-to-Revenue Distribution Evolution}
 
 \textbf{Question:} How has corporate leverage evolved across economic cycles, and does leverage increase during expansions?
 
@@ -468,37 +468,66 @@ GROUP BY year ORDER BY year;
 
 \textbf{SQL Techniques}: Multiple LAG() calls, conditional aggregation with CASE WHEN.
 
-\subsubsection{Query 2.3: Interest Coverage Sensitivity}
+\subsubsection{Query 2.3: Interest Coverage Sensitivity to Policy Rates}
 
-\textbf{Question:} Which sectors are most sensitive to interest rate changes, and how does interest coverage vary across industries?
+\textbf{Question:} Which companies show the strongest correlation between Interest Coverage Ratio and policy rates, indicating rate sensitivity?
 
-\textbf{Result:} Sector-level interest coverage ratios (ICR = EBITDA / Interest Expense) show significant variation. Utilities and Real Estate sectors maintain the lowest average ICR (4--6x), indicating high sensitivity to rate changes. Energy and Materials sectors show moderate ICR (15--25x), while Technology and Healthcare sectors maintain the highest ICR (50--70x), indicating strong rate insulation. The analysis reveals that rate-sensitive sectors (low ICR) are precisely those with high debt levels and capital-intensive operations.
+\textbf{Result:} For companies with 10+ years of data, rolling 5-year correlation analysis between ICR and domestic policy rates reveals significant heterogeneity. Many companies show negative correlations (range -0.4 to -0.1), indicating rate sensitivity: when policy rates rise, their ICR declines, suggesting rising interest expense outpaces EBITDA growth. Utilities and Real Estate companies dominate the highly rate-sensitive group (correlation $<$ -0.3). Conversely, some companies show positive correlations, where higher rates coincide with higher ICR---often reflecting cyclical earnings dynamics where rate increases occur during expansions when EBITDA is strong.
 
 \textbf{Analysis:}
 
-Interest coverage ratios (ICR) measure rate sensitivity directly. A company with ICR of 5x can absorb a 20\% interest expense increase before hitting the 4x threshold---often the minimum for investment-grade credit. Utilities and Real Estate operate at 4--6x, leaving minimal buffer. These capital-intensive sectors rely on debt for infrastructure and property; when rates rise, interest expense jumps immediately (floating-rate) or at refinancing (fixed-rate), squeezing profitability and creditworthiness.
+Rolling 5-year correlation analysis provides a time-adaptive measure of rate sensitivity, capturing how relationships evolve across different economic regimes. For each company, we calculate correlation using a 5-year sliding window, then take the most recent correlation value to classify current rate sensitivity. This approach balances statistical robustness (5 years provides sufficient observations) with responsiveness to structural changes in business models or capital structures.
 
-Technology and Healthcare's high ICR (50--70x) stems from asset-light models and strong cash generation. They finance through equity or retained earnings, not debt, creating rate insulation. But this may be temporary: as these sectors mature and invest in data centers and manufacturing facilities, leverage could rise, eroding their rate advantage.
+A company with rolling correlation of -0.4 shows a strong inverse relationship: rising rates consistently coincide with declining ICR over the recent 5-year window, indicating vulnerability to rate shocks. These companies typically have high leverage, floating-rate debt exposure, or operate in rate-sensitive industries where demand contracts during rate increases.
 
-Energy's moderate ICR (15--25x) reflects commodity-driven volatility. During price booms, EBITDA surges and ICR improves; during busts, ICR collapses. Rate sensitivity varies with commodity prices, creating a complex interaction between rate risk and commodity risk that makes Energy companies difficult to classify.
+Companies with near-zero correlations ($\pm$0.1) are rate-insulated. This can reflect multiple factors: low leverage (minimal interest expense), fixed-rate debt structures (interest expense unchanged despite rate moves), or strong pricing power (EBITDA growth offsets interest expense increases). Technology and Healthcare companies frequently appear in this group due to asset-light models and equity financing.
 
-ICR analysis offers a data-driven alternative to sector-based rate sensitivity. Traditional approaches assume uniform sensitivity within sectors, but the data shows substantial variation. A company-level ICR approach enables granular risk assessment, identifying rate-sensitive firms regardless of sector labels.
+Positive correlations ($>$ 0.2) require careful interpretation. They don't imply ``benefiting from higher rates,'' but rather that ICR and rates move together. This often reflects procyclical earnings: rates rise during expansions when EBITDA surges, improving ICR despite higher interest expense. Energy and Materials companies often show this pattern due to commodity price cycles coinciding with broader economic cycles.
+
+The rolling window approach enables identification of companies whose rate sensitivity has changed over time---for example, firms that deleveraged post-2009 may show declining negative correlation in recent windows.
 
 \begin{lstlisting}[language=SQL]
 WITH icr_data AS (
-    SELECT c.gics_sector_name,
-        CASE WHEN f.interest_expense > 0 
-            THEN f.ebitda / f.interest_expense ELSE NULL 
-        END AS icr
+    SELECT f.company_id, c.company_name, c.country_id,
+        CAST(strftime('%Y', f.period_end_date) AS INTEGER) AS year,
+        f.ebitda / f.interest_expense AS icr
     FROM financials f
     JOIN companies c ON f.company_id = c.company_id
-    WHERE f.period_type = 'ANNUAL' 
-      AND c.gics_sector_name != 'Financials'
+    WHERE f.period_type = 'ANNUAL' AND c.gics_sector_name != 'Financials'
+      AND f.interest_expense > 0
+),
+combined AS (
+    SELECT i.company_id, i.company_name, i.year, i.icr,
+        p.avg_policy_rate
+    FROM icr_data i
+    JOIN (SELECT country_id, CAST(strftime('%Y', rate_date) AS INTEGER) AS year,
+          AVG(rate_value) AS avg_policy_rate
+          FROM interest_rates WHERE rate_type = 'POLICY_RATE'
+          GROUP BY country_id, year) p
+      ON i.year = p.year AND i.country_id = p.country_id
+),
+-- Calculate rolling 5-year correlation for each company-year
+rolling_correlation AS (
+    SELECT c1.company_id, c1.company_name, c1.year,
+        -- Correlation over 5-year window
+        (AVG(c2.icr * c2.avg_policy_rate) - AVG(c2.icr) * AVG(c2.avg_policy_rate)) / 
+          (SQRT(AVG(c2.icr*c2.icr) - AVG(c2.icr)*AVG(c2.icr)) * 
+           SQRT(AVG(c2.avg_policy_rate*c2.avg_policy_rate) - 
+                AVG(c2.avg_policy_rate)*AVG(c2.avg_policy_rate))) AS correlation
+    FROM combined c1
+    JOIN combined c2 ON c1.company_id = c2.company_id 
+                     AND c2.year BETWEEN (c1.year - 4) AND c1.year
+    GROUP BY c1.company_id, c1.company_name, c1.year
+    HAVING COUNT(c2.year) = 5  -- Full 5-year window
 )
-SELECT gics_sector_name, COUNT(*) AS companies,
-    ROUND(AVG(icr), 2) AS avg_icr
-FROM icr_data WHERE icr IS NOT NULL
-GROUP BY gics_sector_name ORDER BY avg_icr;
+-- Get most recent correlation for companies with 10+ years data
+SELECT company_name, MAX(year) AS latest_year,
+    ROUND(correlation, 4) AS rolling_correlation
+FROM rolling_correlation
+WHERE company_id IN (SELECT company_id FROM combined 
+                     GROUP BY company_id HAVING COUNT(*) >= 10)
+GROUP BY company_id, company_name
+ORDER BY correlation;
 \end{lstlisting}
 
 %------------------------------------------------------------------------------
@@ -606,9 +635,8 @@ Policy priorities emerge clearly. Countries with high zombie concentrations and 
 
 \begin{lstlisting}[language=SQL]
 WITH company_risk AS (
-    SELECT c.country_id, strftime('%Y', f.period_end_date) AS year,
-        CASE WHEN f.interest_expense > 0 
-            AND f.ebitda / f.interest_expense < 1.5 THEN 1 ELSE 0 END AS is_zombie,
+    SELECT c.country_id,
+        CASE WHEN f.ebitda / f.interest_expense < 1.5 THEN 1 ELSE 0 END AS is_zombie,
         f.total_debt
     FROM financials f
     JOIN companies c ON f.company_id = c.company_id
@@ -616,14 +644,25 @@ WITH company_risk AS (
       AND c.gics_sector_name != 'Financials'
       AND f.interest_expense > 0
       AND strftime('%Y', f.period_end_date) = '2024'
+),
+country_gdp AS (
+    SELECT country_id, AVG(indicator_value) AS nominal_gdp_bn
+    FROM macro_indicators
+    WHERE indicator_name LIKE '%Nominal GDP%bn%'
+      AND strftime('%Y', indicator_date) = '2024'
+    GROUP BY country_id
 )
-SELECT country_id, COUNT(*) AS total_companies,
+SELECT cr.country_id, COUNT(*) AS total_companies,
     SUM(is_zombie) AS zombie_count,
     ROUND(SUM(is_zombie) * 100.0 / COUNT(*), 1) AS zombie_pct,
     ROUND(SUM(CASE WHEN is_zombie = 1 THEN total_debt ELSE 0 END) 
-        / 1000000, 2) AS zombie_debt_bn
-FROM company_risk
-GROUP BY country_id
+        / 1000000, 2) AS zombie_debt_bn,
+    ROUND(g.nominal_gdp_bn, 0) AS country_gdp_bn,
+    ROUND(SUM(CASE WHEN is_zombie = 1 THEN total_debt ELSE 0 END) 
+        / 1000000 / NULLIF(g.nominal_gdp_bn, 0) * 100, 2) AS zombie_debt_pct_gdp
+FROM company_risk cr
+LEFT JOIN country_gdp g ON cr.country_id = g.country_id
+GROUP BY cr.country_id, g.nominal_gdp_bn
 ORDER BY zombie_pct DESC;
 \end{lstlisting}
 
@@ -701,7 +740,7 @@ Portfolio construction benefits from volatility-based classification. During eco
 \begin{lstlisting}[language=SQL]
 WITH revenue_growth AS (
     SELECT f.company_id, c.gics_sector_name,
-        strftime('%Y', f.period_end_date) AS year,
+        CAST(strftime('%Y', f.period_end_date) AS INTEGER) AS year,
         (f.revenue - LAG(f.revenue) OVER w) / 
         NULLIF(LAG(f.revenue) OVER w, 0) * 100 AS rev_growth
     FROM financials f
@@ -709,18 +748,32 @@ WITH revenue_growth AS (
     WHERE f.period_type = 'ANNUAL' AND f.revenue IS NOT NULL
     WINDOW w AS (PARTITION BY f.company_id ORDER BY f.period_end_date)
 ),
-volatility_calc AS (
+-- Calculate 10-year rolling volatility for each company-year
+rolling_volatility AS (
+    SELECT rg1.company_id, rg1.gics_sector_name, rg1.year,
+        SQRT(AVG(rg2.rev_growth*rg2.rev_growth) - 
+             AVG(rg2.rev_growth)*AVG(rg2.rev_growth)) AS rolling_volatility
+    FROM revenue_growth rg1
+    JOIN revenue_growth rg2 ON rg1.company_id = rg2.company_id 
+                             AND rg2.year BETWEEN (rg1.year - 9) AND rg1.year
+                             AND rg2.rev_growth IS NOT NULL
+    WHERE rg1.rev_growth IS NOT NULL
+    GROUP BY rg1.company_id, rg1.gics_sector_name, rg1.year
+    HAVING COUNT(rg2.year) = 10  -- Full 10-year window
+),
+-- Get most recent rolling volatility for each company
+company_volatility AS (
     SELECT company_id, gics_sector_name,
-        COUNT(*) AS years_of_data,
-        SQRT(AVG(rev_growth*rev_growth) - AVG(rev_growth)*AVG(rev_growth)) AS volatility
-    FROM revenue_growth
-    WHERE rev_growth IS NOT NULL
+        MAX(year) AS latest_year,
+        rolling_volatility AS volatility
+    FROM rolling_volatility
+    WHERE company_id IN (SELECT DISTINCT company_id FROM revenue_growth
+                         GROUP BY company_id HAVING COUNT(*) >= 10)
     GROUP BY company_id, gics_sector_name
-    HAVING COUNT(*) >= 10
 ),
 quartiles AS (
     SELECT *, NTILE(4) OVER (ORDER BY volatility) AS volatility_quartile
-    FROM volatility_calc
+    FROM company_volatility
 )
 SELECT volatility_quartile,
     CASE volatility_quartile
@@ -876,11 +929,11 @@ Future studies should examine whether this pattern holds across different inflat
 
 \textbf{Question:} Do sector returns lead or lag CPI changes, and which sectors provide early signals of inflation trends?
 
-\textbf{Result:} The correlation analysis between sector returns and CPI changes (contemporaneous and lagged) reveals distinct patterns. Energy and Materials sectors show positive correlations with contemporaneous CPI changes, suggesting they move with inflation rather than predicting it. Consumer Staples shows weak positive correlation, while Technology shows near-zero correlation. The lagged analysis reveals that Energy and Materials sectors show stronger correlations with future CPI than with current CPI, suggesting they may provide early inflation signals. However, the lead-lag relationships are weak (correlations 0.1--0.3), indicating that sector returns alone provide limited predictive power for inflation.
+\textbf{Result:} The covariance analysis between sector returns and CPI changes (contemporaneous and lagged) reveals distinct patterns. Energy and Materials sectors show positive covariance with contemporaneous CPI changes, suggesting they move with inflation rather than predicting it. Consumer Staples shows weak positive covariance, while Technology shows near-zero covariance. The lagged analysis reveals that Energy and Materials sectors show stronger positive covariance with future CPI than with current CPI, suggesting they may provide early inflation signals. Note: covariance values are scale-dependent; the sign indicates directional relationship but magnitude is not directly interpretable as correlation coefficients.
 
 \textbf{Analysis:}
 
-Energy and Materials sectors' positive correlation with future CPI reflects their role in the inflation transmission mechanism. Energy price increases flow through to transportation costs, heating costs, and manufacturing inputs, eventually appearing in CPI with a lag. Materials price increases flow through to finished goods prices. These sectors' returns correlating more strongly with future CPI than current CPI suggests commodity price movements provide early signals of inflation trends, even if the signals are noisy. This finding supports research on yield curve predictors \cite{ang2009} and inflation forecasting, which document how asset prices can signal future macroeconomic conditions.
+Energy and Materials sectors' positive covariance with future CPI reflects their role in the inflation transmission mechanism. Energy price increases flow through to transportation costs, heating costs, and manufacturing inputs, eventually appearing in CPI with a lag. Materials price increases flow through to finished goods prices. These sectors showing stronger covariance with future CPI than current CPI suggests commodity price movements provide early signals of inflation trends, even if the signals are noisy. This finding supports research on yield curve predictors \cite{ang2009} and inflation forecasting, which document how asset prices can signal future macroeconomic conditions.
 
 \begin{lstlisting}[language=SQL]
 WITH monthly_data AS (
@@ -914,17 +967,17 @@ ORDER BY return_cpi_covariance DESC;
 
 \textbf{Question:} Which sectors are most sensitive to interest rate changes, and how does rate sensitivity vary across the business cycle?
 
-\textbf{Result:} The correlation analysis between sector returns and 10-year Treasury yield changes reveals distinct rate sensitivity profiles. Utilities shows the strongest negative correlation (-0.0073), indicating rate sensitivity (returns decline when yields rise). All other sectors show positive correlations, with Energy showing the strongest positive correlation (+0.1542), indicating rate beneficiary characteristics. Financials shows moderate positive correlation (+0.1151), reflecting the sector's benefit from higher net interest margins.
+\textbf{Result:} The covariance analysis between sector returns and 10-year Treasury yield changes reveals distinct rate sensitivity profiles. Utilities shows negative covariance, indicating rate sensitivity (returns decline when yields rise). All other sectors show positive covariance, with Energy showing the strongest positive relationship, indicating rate beneficiary characteristics. Financials shows moderate positive covariance, reflecting the sector's benefit from higher net interest margins. Note: these are covariance values (not correlation coefficients), so their magnitude is scale-dependent; the sign indicates directional relationship with rate changes.
 
 \textbf{Analysis:}
 
-Utilities' negative correlation (rate sensitivity) aligns with traditional expectations. Capital-intensive utilities require substantial debt financing; when rates rise, financing costs increase immediately, reducing profitability. Utilities are also viewed as bond proxies due to stable dividends. When bond yields rise, utilities become less attractive relative to bonds, leading to valuation compression.
+Utilities' negative covariance (rate sensitivity) aligns with traditional expectations. Capital-intensive utilities require substantial debt financing; when rates rise, financing costs increase immediately, reducing profitability. Utilities are also viewed as bond proxies due to stable dividends. When bond yields rise, utilities become less attractive relative to bonds, leading to valuation compression.
 
-Positive correlations for most other sectors require explanation. Traditional theory suggests higher discount rates should reduce equity valuations, creating negative correlations. But the data shows positive correlations, suggesting rate increases coincide with periods of economic strength and rising earnings, offsetting valuation compression. This reflects the dual nature of interest rates: they represent both discount rates (negative for valuations) and economic indicators (positive for earnings).
+Positive covariance for most other sectors requires explanation. Traditional theory suggests higher discount rates should reduce equity valuations, creating negative relationships. But the data shows positive covariance, suggesting rate increases coincide with periods of economic strength and rising earnings, offsetting valuation compression. This reflects the dual nature of interest rates: they represent both discount rates (negative for valuations) and economic indicators (positive for earnings).
 
-Energy's strong positive correlation (+0.1542) reflects the sector's cyclical nature. Rate increases typically occur during economic expansions, when energy demand is strong and prices are rising. Energy companies' profitability is driven primarily by commodity prices and demand, not financing costs, making them rate beneficiaries despite their capital-intensive nature.
+Energy's strong positive covariance reflects the sector's cyclical nature. Rate increases typically occur during economic expansions, when energy demand is strong and prices are rising. Energy companies' profitability is driven primarily by commodity prices and demand, not financing costs, making them rate beneficiaries despite their capital-intensive nature.
 
-Financials' positive correlation (+0.1151) reflects the sector's unique rate exposure. Banks benefit from higher rates through improved net interest margins: they can raise loan rates faster than deposit rates, expanding profitability. The positive correlation confirms Financials are rate beneficiaries, at least in the initial stages of rate increases.
+Financials' positive covariance reflects the sector's unique rate exposure. Banks benefit from higher rates through improved net interest margins: they can raise loan rates faster than deposit rates, expanding profitability. The positive covariance confirms Financials are rate beneficiaries, at least in the initial stages of rate increases.
 
 \begin{lstlisting}[language=SQL]
 WITH weekly_yield AS (

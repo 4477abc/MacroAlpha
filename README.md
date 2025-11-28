@@ -185,7 +185,7 @@ Analyzes market structure evolution and concentration trends using FTSE 100, dem
 
 Analyzes how corporate capital structure evolves across economic cycles and identifies companies vulnerable to rate shocks. Uses data-driven groupings rather than GICS sector classification. Scope: non-financial companies only (`WHERE gics_sector_name != 'Financials'`).
 
-1. **Debt-to-Equity Ratio Distribution Evolution (2005–2024):** Calculates cross-sectional distribution of Debt-to-Equity ratios for each year using `PERCENTILE_CONT()` (P25, Median, P75, P90). Tracks distribution shifts during pre-2008 credit boom, 2008–2009 deleveraging, and post-2010 recovery. Joins with macro GDP growth to test whether leverage increases during expansions.
+1. **Debt-to-Revenue Ratio Distribution Evolution (2005–2024):** Calculates cross-sectional distribution of Debt-to-Revenue ratios for each year (Total Debt / Revenue). Tracks distribution shifts during pre-2008 credit boom, 2008–2009 deleveraging, and post-2010 recovery. Joins with macro GDP growth to test whether leverage increases during expansions.
 
 2. **Deleveraging Cycles Detection (Firm-Level):** Identifies companies that reduced D/E ratio for 3+ consecutive years using `LAG(de_ratio, 1)` and `LAG(de_ratio, 2)`. Counts firms deleveraging during GDP contraction years versus expansion years to test whether deleveraging is pro-cyclical (occurs during stress) or counter-cyclical (occurs during recovery).
 
