@@ -33,7 +33,7 @@ Data extraction used Bloomberg's Spreadsheet Builder with Time Series Table form
 
 **2. Equity Price Data (Weekly)**
 - **Data Source:** Weekly closing prices and total returns for constituent equities. Weekly frequency balances frequency matching (aligns with quarterly macro and annual/quarterly financials), noise reduction (filters intraday volatility), analytical sufficiency (supports correlations, beta, rolling windows), and data manageability (critical for 1000+ tickers over 20 years).
-- **Source File:** [`price_weekly.xlsx`](https://github.com/4477abc/MacroAlpha/blob/main/price_weekly.xlsx) → `prices_weekly` table
+- **Source File:** [`price_weekly.xlsx`](https://github.com/4477abc/MacroAlpha/raw/main/price_weekly.xlsx) → `prices_weekly` table
 - **Tool:** Spreadsheet Builder → `Time Series Table`
 - **Tickers:** Enter ticker list (batch 100-200 tickers per request)
 - **Fields:** 
@@ -54,8 +54,8 @@ Data extraction used Bloomberg's Spreadsheet Builder with Time Series Table form
   - **Gross Profit** (`GROSS_PROFIT`) - Gross profit from operations
   - **COGS** (`ARD_COST_OF_GOODS_SOLD`) - Cost of Goods Sold from Annual Report Data (ARD = unadjusted company-reported figures)
 - **Source Files:** 
-  - Annual: [`financials_annual.xlsx`](https://github.com/4477abc/MacroAlpha/blob/main/financials_annual.xlsx) → `financials` table (period_type='ANNUAL')
-  - Quarterly: [`financials_quarterly.xlsx`](https://github.com/4477abc/MacroAlpha/blob/main/financials_quarterly.xlsx) → `financials` table (period_type='QUARTERLY')
+  - Annual: [`financials_annual.xlsx`](https://github.com/4477abc/MacroAlpha/raw/main/financials_annual.xlsx) → `financials` table (period_type='ANNUAL')
+  - Quarterly: [`financials_quarterly.xlsx`](https://github.com/4477abc/MacroAlpha/raw/main/financials_quarterly.xlsx) → `financials` table (period_type='QUARTERLY')
 - **Tool:** Spreadsheet Builder → `Time Series Table`
 - **Tickers:** Enter ticker list
 - **Fields:** Select the following fundamental data fields:
@@ -74,11 +74,11 @@ Data extraction used Bloomberg's Spreadsheet Builder with Time Series Table form
 
 **4. Macroeconomic Indicators**
 - **Data Source:** GDP, CPI, employment, housing starts, and other economic indicators extracted via Bloomberg `<ECST>` function for five countries:
-  - US: [`usa_macros_2024~2005.xlsx`](https://github.com/4477abc/MacroAlpha/blob/main/usa_macros_2024~2005.xlsx) → `macro_indicators` (country_id='US')
-  - UK: [`uk_macros_2024~2005.xlsx`](https://github.com/4477abc/MacroAlpha/blob/main/uk_macros_2024~2005.xlsx) → `macro_indicators` (country_id='GB')
-  - Germany: [`de_macros_2024~2005.xlsx`](https://github.com/4477abc/MacroAlpha/blob/main/de_macros_2024~2005.xlsx) → `macro_indicators` (country_id='DE')
-  - Japan: [`jp_macros_2024~2005.xlsx`](https://github.com/4477abc/MacroAlpha/blob/main/jp_macros_2024~2005.xlsx) → `macro_indicators` (country_id='JP')
-  - China: [`cn_macros_2024~2005.xlsx`](https://github.com/4477abc/MacroAlpha/blob/main/cn_macros_2024~2005.xlsx) → `macro_indicators` (country_id='CN')
+  - US: [`usa_macros_2024~2005.xlsx`](https://github.com/4477abc/MacroAlpha/raw/main/usa_macros_2024~2005.xlsx) → `macro_indicators` (country_id='US')
+  - UK: [`uk_macros_2024~2005.xlsx`](https://github.com/4477abc/MacroAlpha/raw/main/uk_macros_2024~2005.xlsx) → `macro_indicators` (country_id='GB')
+  - Germany: [`de_macros_2024~2005.xlsx`](https://github.com/4477abc/MacroAlpha/raw/main/de_macros_2024~2005.xlsx) → `macro_indicators` (country_id='DE')
+  - Japan: [`jp_macros_2024~2005.xlsx`](https://github.com/4477abc/MacroAlpha/raw/main/jp_macros_2024~2005.xlsx) → `macro_indicators` (country_id='JP')
+  - China: [`cn_macros_2024~2005.xlsx`](https://github.com/4477abc/MacroAlpha/raw/main/cn_macros_2024~2005.xlsx) → `macro_indicators` (country_id='CN')
 - **Tool:** Spreadsheet Builder → `Time Series Table`
 - **Country Tickers:** Use `<ECST>` function for economic statistics:
   - US: `USGDP Index`, `USCPI Index`, `USUNEMPL Index`, etc.
@@ -93,7 +93,7 @@ Data extraction used Bloomberg's Spreadsheet Builder with Time Series Table form
 
 **5. Interest Rates**
 - **Data Source:** Government bond yields and central bank policy rates for five countries (US, UK, DE, JP, CN).
-- **Source File:** [`5 countries 10y yield and policy rate.xlsx`](https://github.com/4477abc/MacroAlpha/blob/main/5%20countries%2010y%20yield%20and%20policy%20rate.xlsx) → `interest_rates` table
+- **Source File:** [`5 countries 10y yield and policy rate.xlsx`](https://github.com/4477abc/MacroAlpha/raw/main/5%20countries%2010y%20yield%20and%20policy%20rate.xlsx) → `interest_rates` table
 - **Tool:** Spreadsheet Builder → `Time Series Table`
 - **Tickers:**
   - 10Y Yields: `USGG10YR Index`, `GTGBP10Y Govt`, `GTDEM10Y Govt`, `GTJPY10Y Govt`, `GTCNY10Y Govt`
@@ -105,7 +105,7 @@ Data extraction used Bloomberg's Spreadsheet Builder with Time Series Table form
 
 **6. Index Membership (Historical Snapshots)**
 - **Data Source:** Historical membership data for S&P 500 and FTSE 100 with effective dates and weights. This file consolidates year-end snapshots (SPX/UKX as of Dec 31 YYYY.xlsx) to enable point-in-time analysis and avoid survivorship bias.
-- **Source File:** [`index_membership_snapshot.csv`](https://github.com/4477abc/MacroAlpha/blob/main/index_membership_snapshot.csv) → `index_membership` table
+- **Source File:** [`index_membership_snapshot.csv`](https://github.com/4477abc/MacroAlpha/raw/main/index_membership_snapshot.csv) → `index_membership` table
 - **Tool:** Terminal → `SPX Index MEMB <GO>` or `UKX Index MEMB <GO>`
 - **Method:**
   1. Type `SPX Index MEMB <GO>` (or `UKX Index MEMB <GO>` for FTSE 100)
@@ -117,7 +117,7 @@ Data extraction used Bloomberg's Spreadsheet Builder with Time Series Table form
 
 **7. Company Master Data**
 - **Data Source:** Company master file with ticker, name, country, currency, GICS classification, and market capitalization.
-- **Source File:** [`company_master.csv`](https://github.com/4477abc/MacroAlpha/blob/main/company_master.csv) → `companies` table
+- **Source File:** [`company_master.csv`](https://github.com/4477abc/MacroAlpha/raw/main/company_master.csv) → `companies` table
 - **Tool:** Spreadsheet Builder → `Company Information`
 - **Tickers:** Enter full ticker list
 - **Fields:**
