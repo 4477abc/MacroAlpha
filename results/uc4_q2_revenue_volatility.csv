@@ -1,0 +1,5 @@
+volatility_quartile,classification,company_count,avg_volatility,avg_growth_rate
+1,Low Volatility (Defensive),256,0.0,0.0
+2,Below Average,256,2.13,2.43
+3,Above Average,256,9.9,6.11
+4,High Volatility (Cyclical),256,86.24,28.85

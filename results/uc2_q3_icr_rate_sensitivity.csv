@@ -1,0 +1,101 @@
+company_name,gics_sector_name,country_id,total_years_data,avg_icr_recent_5y,correlation_with_policy_rate,rate_sensitivity_classification
+SMITH & NEPHEW PLC,Health Care,GB,20,11.4,-0.9933,Highly Rate-Sensitive
+PINNACLE WEST CAPITAL,Utilities,US,20,6.32,-0.9924,Highly Rate-Sensitive
+VENTAS INC,Real Estate,US,20,3.45,-0.9909,Highly Rate-Sensitive
+AMERICAN TOWER CORP,Real Estate,US,20,6.34,-0.9908,Highly Rate-Sensitive
+ACTIVISION BLIZZARD INC,Communication Services,US,18,25.6,-0.9875,Highly Rate-Sensitive
+JACOBS SOLUTIONS INC,Industrials,US,20,11.08,-0.9865,Highly Rate-Sensitive
+SL GREEN REALTY CORP,Real Estate,US,20,3.55,-0.9847,Highly Rate-Sensitive
+PHILIP MORRIS INTERNATIONAL,Consumer Staples,US,19,14.0,-0.9792,Highly Rate-Sensitive
+ENTAIN PLC,Consumer Discretionary,GB,17,7.12,-0.9778,Highly Rate-Sensitive
+BUNZL PLC,Industrials,GB,20,10.08,-0.9769,Highly Rate-Sensitive
+METTLER-TOLEDO INTERNATIONAL,Health Care,US,20,21.03,-0.9748,Highly Rate-Sensitive
+EVERSOURCE ENERGY,Utilities,US,20,4.97,-0.9747,Highly Rate-Sensitive
+HONEYWELL INTERNATIONAL INC,Industrials,US,20,15.6,-0.9735,Highly Rate-Sensitive
+HONEYWELL INTERNATIONAL INC,Industrials,US,20,15.6,-0.9735,Highly Rate-Sensitive
+DISH NETWORK CORP-A,Communication Services,US,20,138.98,-0.9729,Highly Rate-Sensitive
+INTEL CORP,Information Technology,US,19,30.2,-0.9725,Highly Rate-Sensitive
+INTEL CORP,Information Technology,US,19,30.2,-0.9725,Highly Rate-Sensitive
+MONDI PLC,Materials,GB,20,12.8,-0.9725,Highly Rate-Sensitive
+AMGEN INC,Health Care,US,20,7.2,-0.9699,Highly Rate-Sensitive
+AMGEN INC,Health Care,US,20,7.2,-0.9699,Highly Rate-Sensitive
+AMERICAN ELECTRIC POWER,Utilities,US,20,4.73,-0.9691,Highly Rate-Sensitive
+AMERICAN ELECTRIC POWER,Utilities,US,20,4.73,-0.9691,Highly Rate-Sensitive
+MCCORMICK & CO-NON VTG SHRS,Consumer Staples,US,20,7.57,-0.9688,Highly Rate-Sensitive
+THERMO FISHER SCIENTIFIC INC,Health Care,US,20,14.4,-0.9682,Highly Rate-Sensitive
+CMS ENERGY CORP,Utilities,US,20,3.6,-0.967,Highly Rate-Sensitive
+AES CORP,Utilities,US,20,2.6,-0.967,Highly Rate-Sensitive
+P G & E CORP,Utilities,US,20,2.6,-0.967,Highly Rate-Sensitive
+LOCKHEED MARTIN CORP,Industrials,US,20,14.0,-0.9663,Highly Rate-Sensitive
+ANSYS INC,Information Technology,US,15,35.01,-0.9628,Highly Rate-Sensitive
+IRON MOUNTAIN INC,Real Estate,US,20,4.15,-0.9614,Highly Rate-Sensitive
+SPIRAX GROUP PLC,Industrials,GB,20,27.57,-0.9611,Highly Rate-Sensitive
+LABCORP HOLDINGS INC,Health Care,US,20,13.45,-0.9579,Highly Rate-Sensitive
+UNITEDHEALTH GROUP INC,Health Care,US,20,13.4,-0.9567,Highly Rate-Sensitive
+UNILEVER PLC,Consumer Staples,GB,19,13.6,-0.9522,Highly Rate-Sensitive
+ATMOS ENERGY CORP,Utilities,US,20,14.07,-0.9508,Highly Rate-Sensitive
+CUMMINS INC,Industrials,US,20,20.2,-0.9505,Highly Rate-Sensitive
+CAMERON INTERNATIONAL CORP,Energy,US,11,9.7,-0.9458,Highly Rate-Sensitive
+ROWAN COMPANIES PLC-A,Energy,US,15,3.2,-0.9457,Highly Rate-Sensitive
+SAGE GROUP PLC/THE,Information Technology,GB,20,15.2,-0.9428,Highly Rate-Sensitive
+BERKELEY GROUP HOLDINGS/THE,Consumer Discretionary,GB,20,35.24,-0.942,Highly Rate-Sensitive
+SCANA CORP,Utilities,US,15,2.0,-0.9402,Highly Rate-Sensitive
+BT GROUP PLC,Communication Services,GB,20,9.6,-0.9389,Highly Rate-Sensitive
+LEGGETT & PLATT INC,Consumer Discretionary,US,20,5.24,-0.9354,Highly Rate-Sensitive
+DUN & BRADSTREET CORP,Industrials,US,15,6.19,-0.9275,Highly Rate-Sensitive
+FMC CORP,Materials,US,20,6.38,-0.9268,Highly Rate-Sensitive
+ROCKWELL COLLINS INC,Industrials,US,14,14.6,-0.9262,Highly Rate-Sensitive
+20230930-DK-BUTTERFLY-1 INC,Consumer Discretionary,US,11,0.15,-0.9255,Highly Rate-Sensitive
+20230930-DK-BUTTERFLY-1 INC,Consumer Discretionary,US,11,0.15,-0.9255,Highly Rate-Sensitive
+NIELSEN HOLDINGS LTD,Industrials,US,15,2.8,-0.921,Highly Rate-Sensitive
+SEAGATE TECHNOLOGY HOLDINGS,Information Technology,US,20,5.4,-0.9202,Highly Rate-Sensitive
+WEC ENERGY GROUP INC,Utilities,US,20,5.2,-0.916,Highly Rate-Sensitive
+GENERAC HOLDINGS INC,Industrials,US,18,14.17,-0.9155,Highly Rate-Sensitive
+CIENA CORP,Information Technology,US,20,11.68,-0.9123,Highly Rate-Sensitive
+CIENA CORP,Information Technology,US,20,11.68,-0.9123,Highly Rate-Sensitive
+COOPER TIRE & RUBBER CO LLC,Consumer Discretionary,US,16,15.15,-0.9119,Highly Rate-Sensitive
+UNITED UTILITIES GROUP PLC,Utilities,GB,20,3.54,-0.9077,Highly Rate-Sensitive
+PARAMOUNT GLOBAL-CLASS B,Communication Services,US,20,1.8,-0.9061,Highly Rate-Sensitive
+PARAMOUNT GLOBAL-CLASS B,Communication Services,US,20,1.8,-0.9061,Highly Rate-Sensitive
+HP INC,Information Technology,US,20,16.4,-0.9055,Highly Rate-Sensitive
+DOLLAR GENERAL CORP,Consumer Staples,US,20,30.68,-0.9011,Highly Rate-Sensitive
+DEAN FOODS CO,Consumer Staples,US,15,2.01,-0.8985,Highly Rate-Sensitive
+PUBLIC STORAGE,Real Estate,US,20,22.23,-0.8985,Highly Rate-Sensitive
+PENNON GROUP PLC,Utilities,GB,20,4.25,-0.8972,Highly Rate-Sensitive
+HIKMA PHARMACEUTICALS PLC,Health Care,GB,20,12.2,-0.8969,Highly Rate-Sensitive
+PPG INDUSTRIES INC,Materials,US,20,14.8,-0.8965,Highly Rate-Sensitive
+3M CO,Industrials,US,20,10.4,-0.8909,Highly Rate-Sensitive
+JM SMUCKER CO/THE,Consumer Staples,US,20,7.98,-0.8863,Highly Rate-Sensitive
+ROLLINS INC,Industrials,US,10,68.2,-0.8858,Highly Rate-Sensitive
+BAE SYSTEMS PLC,Industrials,GB,20,11.8,-0.8816,Highly Rate-Sensitive
+EXTRA SPACE STORAGE INC,Real Estate,US,20,5.44,-0.8815,Highly Rate-Sensitive
+WATERS CORP,Health Care,US,20,16.15,-0.8732,Highly Rate-Sensitive
+SEVERN TRENT PLC,Utilities,GB,20,3.86,-0.8719,Highly Rate-Sensitive
+QUEST DIAGNOSTICS INC,Health Care,US,20,14.0,-0.8712,Highly Rate-Sensitive
+L3HARRIS TECHNOLOGIES INC,Industrials,US,19,8.4,-0.8653,Highly Rate-Sensitive
+RENTOKIL INITIAL PLC,Industrials,GB,20,15.06,-0.8639,Highly Rate-Sensitive
+VERIZON COMMUNICATIONS INC,Communication Services,US,20,11.0,-0.8635,Highly Rate-Sensitive
+RELX PLC,Industrials,GB,20,14.8,-0.8633,Highly Rate-Sensitive
+CBRE GROUP INC - A,Real Estate,US,20,25.62,-0.861,Highly Rate-Sensitive
+PROCTER & GAMBLE CO/THE,Consumer Staples,US,20,35.6,-0.8608,Highly Rate-Sensitive
+EMERSON ELECTRIC CO,Industrials,US,20,16.6,-0.8554,Highly Rate-Sensitive
+EBAY INC,Consumer Discretionary,US,20,11.0,-0.8533,Highly Rate-Sensitive
+EBAY INC,Consumer Discretionary,US,20,11.0,-0.8533,Highly Rate-Sensitive
+BALL CORP,Materials,US,20,5.4,-0.8519,Highly Rate-Sensitive
+DIPLOMA PLC,Industrials,GB,16,18.81,-0.851,Highly Rate-Sensitive
+SEALED AIR CORP,Materials,US,20,5.17,-0.8507,Highly Rate-Sensitive
+UNIVERSAL HEALTH SERVICES-B,Health Care,US,20,15.13,-0.8502,Highly Rate-Sensitive
+INTU PROPERTIES PLC,Real Estate,GB,15,-0.79,-0.8498,Highly Rate-Sensitive
+CRODA INTERNATIONAL PLC,Materials,GB,20,20.94,-0.8478,Highly Rate-Sensitive
+BXP INC,Real Estate,US,20,3.62,-0.8473,Highly Rate-Sensitive
+CONVATEC GROUP PLC,Health Care,GB,16,9.03,-0.8458,Highly Rate-Sensitive
+CARMAX INC,Consumer Discretionary,US,20,14.41,-0.8446,Highly Rate-Sensitive
+MAXIM INTEGRATED PRODUCTS,Information Technology,US,11,23.26,-0.8412,Highly Rate-Sensitive
+MAXIM INTEGRATED PRODUCTS,Information Technology,US,11,23.26,-0.8412,Highly Rate-Sensitive
+TEXAS INSTRUMENTS INC,Information Technology,US,17,36.0,-0.8409,Highly Rate-Sensitive
+TEXAS INSTRUMENTS INC,Information Technology,US,17,36.0,-0.8409,Highly Rate-Sensitive
+NCR VOYIX CORP,Information Technology,US,20,2.4,-0.8402,Highly Rate-Sensitive
+DECHRA PHARMACEUTICALS LTD,Health Care,GB,20,75.97,-0.8396,Highly Rate-Sensitive
+BIG LOTS INC,Consumer Discretionary,US,20,52.28,-0.8385,Highly Rate-Sensitive
+COLGATE-PALMOLIVE CO,Consumer Staples,US,20,19.8,-0.8379,Highly Rate-Sensitive
+TAKE-TWO INTERACTIVE SOFTWRE,Communication Services,US,18,88.87,-0.8372,Highly Rate-Sensitive

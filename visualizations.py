@@ -86,7 +86,7 @@ def plot_uc1_concentration():
     # Plot 2: HHI Index
     ax2.plot(df2['year'], df2['hhi'], marker='o', color=COLORS['secondary'], linewidth=2, markersize=6)
     ax2.fill_between(df2['year'], df2['hhi'], alpha=0.3, color=COLORS['secondary'])
-    ax2.axhline(y=250, color=COLORS['accent'], linestyle='--', label='Moderate concentration')
+    ax2.axhline(y=300, color=COLORS['accent'], linestyle='--', label='Mean HHI (reference)')
     ax2.set_xlabel('Year')
     ax2.set_ylabel('HHI Index')
     ax2.set_title('UC1-Q2: Herfindahl-Hirschman Index (Market Concentration)')

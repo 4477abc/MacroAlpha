@@ -5,3 +5,4 @@ macroalpha.db
 *.log
 *.out
 *.toc
+venv/

@@ -1,0 +1,188 @@
+year,zombie_count,gics_sector_name
+2005,10,Health Care
+2005,7,Real Estate
+2005,7,Information Technology
+2005,5,Communication Services
+2005,4,Industrials
+2005,3,Consumer Discretionary
+2005,1,Consumer Staples
+2006,10,Health Care
+2006,7,Information Technology
+2006,5,Consumer Discretionary
+2006,4,Real Estate
+2006,4,Industrials
+2006,3,Consumer Staples
+2006,3,Communication Services
+2006,1,Utilities
+2006,1,Energy
+2007,8,Information Technology
+2007,8,Health Care
+2007,6,Industrials
+2007,6,Consumer Discretionary
+2007,5,Communication Services
+2007,3,Real Estate
+2007,2,Utilities
+2007,1,Materials
+2007,1,Energy
+2007,1,Consumer Staples
+2008,16,Consumer Discretionary
+2008,9,Information Technology
+2008,9,Industrials
+2008,7,Real Estate
+2008,7,Health Care
+2008,2,Materials
+2008,2,Consumer Staples
+2008,2,Communication Services
+2008,1,Energy
+2009,25,Information Technology
+2009,23,Consumer Discretionary
+2009,11,Real Estate
+2009,11,Industrials
+2009,10,Communication Services
+2009,9,Health Care
+2009,6,Materials
+2009,5,Consumer Staples
+2009,3,Energy
+2010,10,Consumer Discretionary
+2010,9,Health Care
+2010,8,Information Technology
+2010,5,Industrials
+2010,2,Real Estate
+2010,2,Materials
+2010,2,Communication Services
+2010,1,Energy
+2010,1,Consumer Staples
+2011,8,Consumer Discretionary
+2011,7,Industrials
+2011,6,Information Technology
+2011,6,Health Care
+2011,3,Energy
+2011,2,Real Estate
+2011,2,Materials
+2011,2,Consumer Staples
+2011,2,Communication Services
+2012,15,Information Technology
+2012,9,Industrials
+2012,8,Health Care
+2012,6,Materials
+2012,6,Consumer Discretionary
+2012,4,Energy
+2012,4,Communication Services
+2012,2,Consumer Staples
+2012,1,Real Estate
+2013,8,Information Technology
+2013,7,Health Care
+2013,6,Materials
+2013,6,Consumer Discretionary
+2013,4,Industrials
+2013,4,Energy
+2013,1,Utilities
+2013,1,Real Estate
+2013,1,Consumer Staples
+2013,1,Communication Services
+2014,14,Information Technology
+2014,9,Energy
+2014,8,Health Care
+2014,7,Consumer Discretionary
+2014,4,Industrials
+2014,3,Materials
+2014,2,Communication Services
+2014,1,Real Estate
+2015,28,Energy
+2015,12,Industrials
+2015,10,Materials
+2015,10,Information Technology
+2015,7,Health Care
+2015,6,Communication Services
+2015,4,Consumer Discretionary
+2015,3,Consumer Staples
+2015,1,Utilities
+2015,1,Real Estate
+2016,22,Energy
+2016,12,Information Technology
+2016,11,Industrials
+2016,8,Health Care
+2016,7,Materials
+2016,6,Consumer Discretionary
+2016,6,Communication Services
+2016,2,Utilities
+2016,1,Real Estate
+2016,1,Consumer Staples
+2017,11,Information Technology
+2017,10,Energy
+2017,9,Industrials
+2017,9,Health Care
+2017,5,Consumer Discretionary
+2017,5,Communication Services
+2017,4,Materials
+2017,3,Utilities
+2017,3,Consumer Staples
+2017,2,Real Estate
+2018,11,Information Technology
+2018,11,Energy
+2018,9,Industrials
+2018,9,Health Care
+2018,8,Consumer Discretionary
+2018,4,Consumer Staples
+2018,3,Utilities
+2018,3,Materials
+2018,3,Communication Services
+2018,2,Real Estate
+2019,13,Energy
+2019,10,Consumer Discretionary
+2019,7,Industrials
+2019,6,Communication Services
+2019,5,Real Estate
+2019,5,Information Technology
+2019,5,Consumer Staples
+2019,4,Health Care
+2019,3,Materials
+2019,2,Utilities
+2020,32,Energy
+2020,27,Consumer Discretionary
+2020,19,Industrials
+2020,10,Health Care
+2020,6,Real Estate
+2020,6,Information Technology
+2020,5,Materials
+2020,4,Communication Services
+2020,2,Consumer Staples
+2020,1,Utilities
+2021,14,Consumer Discretionary
+2021,13,Industrials
+2021,9,Energy
+2021,4,Real Estate
+2021,4,Information Technology
+2021,2,Utilities
+2021,2,Health Care
+2021,2,Consumer Staples
+2021,2,Communication Services
+2022,11,Consumer Discretionary
+2022,6,Communication Services
+2022,5,Industrials
+2022,5,Health Care
+2022,5,Energy
+2022,4,Real Estate
+2022,3,Information Technology
+2022,2,Materials
+2022,2,Consumer Staples
+2022,1,Utilities
+2023,11,Consumer Discretionary
+2023,6,Communication Services
+2023,5,Real Estate
+2023,5,Information Technology
+2023,5,Health Care
+2023,4,Industrials
+2023,3,Materials
+2023,2,Energy
+2023,2,Consumer Staples
+2023,1,Utilities
+2024,8,Information Technology
+2024,8,Consumer Discretionary
+2024,8,Communication Services
+2024,6,Health Care
+2024,5,Real Estate
+2024,4,Materials
+2024,4,Industrials
+2024,3,Consumer Staples
+2024,2,Energy

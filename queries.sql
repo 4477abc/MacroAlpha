@@ -90,15 +90,15 @@ uk_returns AS (
 )
 SELECT 
     h.year,
-    ROUND(h.hhi, 4) AS hhi_index,
+    ROUND(h.hhi, 2) AS hhi_index,
     h.num_members,
     ROUND(h.avg_weight, 2) AS avg_weight_pct,
     ROUND(h.max_weight, 2) AS largest_weight_pct,
+    ROUND(10000.0 / h.hhi, 1) AS effective_positions,
     ROUND(r.avg_weekly_return * 52, 2) AS approx_annual_return_pct,
     CASE 
-        WHEN h.hhi < 0.01 THEN 'Highly Competitive'
-        WHEN h.hhi < 0.15 THEN 'Unconcentrated'
-        WHEN h.hhi < 0.25 THEN 'Moderately Concentrated'
+        WHEN h.hhi < 1500 THEN 'Unconcentrated'
+        WHEN h.hhi < 2500 THEN 'Moderately Concentrated'
         ELSE 'Highly Concentrated'
     END AS concentration_level
 FROM hhi_calc h
@@ -170,9 +170,8 @@ ORDER BY ac.year, ac.status;
 -- ############################################################################
 
 -- ----------------------------------------------------------------------------
--- UC2-Q1: Debt-to-Equity Ratio Distribution Evolution (2005-2024)
--- Calculate cross-sectional percentiles of D/E ratio each year
--- Note: Using Total Debt / (Revenue as proxy for scale) due to data availability
+-- UC2-Q1: Debt-to-Revenue Ratio Distribution Evolution (2005-2024)
+-- Calculate cross-sectional percentiles of Debt/Revenue ratio each year
 -- ----------------------------------------------------------------------------
 
 WITH de_ratios AS (
@@ -284,7 +283,7 @@ ORDER BY d.year;
 
 -- ----------------------------------------------------------------------------
 -- UC2-Q3: Interest Coverage Sensitivity to Policy Rates
--- Calculate rolling correlation between ICR and policy rate
+-- Calculate rolling 5-year correlation between ICR and policy rate
 -- Identify rate-sensitive vs rate-insulated companies
 -- ----------------------------------------------------------------------------
 
@@ -294,7 +293,7 @@ WITH icr_data AS (
         c.company_name,
         c.country_id,
         c.gics_sector_name,
-        strftime('%Y', f.period_end_date) AS year,
+        CAST(strftime('%Y', f.period_end_date) AS INTEGER) AS year,
         CASE 
             WHEN f.interest_expense > 0 THEN f.ebitda / f.interest_expense
             ELSE NULL
@@ -309,7 +308,7 @@ WITH icr_data AS (
 ),
 policy_rates AS (
     SELECT 
-        strftime('%Y', rate_date) AS year,
+        CAST(strftime('%Y', rate_date) AS INTEGER) AS year,
         country_id,
         AVG(rate_value) AS avg_policy_rate
     FROM interest_rates
@@ -328,32 +327,79 @@ combined AS (
     FROM icr_data i
     JOIN policy_rates p ON i.year = p.year AND i.country_id = p.country_id
 ),
-company_stats AS (
+-- Calculate rolling 5-year correlation for each company-year
+rolling_correlation AS (
+    SELECT 
+        c1.company_id,
+        c1.company_name,
+        c1.gics_sector_name,
+        c1.country_id,
+        c1.year,
+        COUNT(c2.year) AS window_size,
+        -- Calculate correlation over 5-year window
+        AVG(c2.interest_coverage_ratio) AS avg_icr,
+        AVG(c2.avg_policy_rate) AS avg_rate,
+        AVG(c2.interest_coverage_ratio * c2.avg_policy_rate) AS avg_icr_rate_product,
+        AVG(c2.interest_coverage_ratio * c2.interest_coverage_ratio) AS avg_icr_squared,
+        AVG(c2.avg_policy_rate * c2.avg_policy_rate) AS avg_rate_squared
+    FROM combined c1
+    JOIN combined c2 ON c1.company_id = c2.company_id 
+                     AND c2.year BETWEEN (c1.year - 4) AND c1.year
+    GROUP BY c1.company_id, c1.company_name, c1.gics_sector_name, c1.country_id, c1.year
+    HAVING COUNT(c2.year) = 5  -- Full 5-year window
+),
+-- Calculate actual correlation from components
+correlation_calc AS (
     SELECT 
         company_id,
         company_name,
         gics_sector_name,
         country_id,
-        COUNT(*) AS years_of_data,
-        AVG(interest_coverage_ratio) AS avg_icr,
-        AVG(avg_policy_rate) AS avg_rate
-    FROM combined
-    GROUP BY company_id, company_name, gics_sector_name, country_id
-    HAVING COUNT(*) >= 10  -- At least 10 years of data
+        year,
+        avg_icr,
+        avg_rate,
+        CASE 
+            WHEN (avg_icr_squared - avg_icr * avg_icr) > 0 
+             AND (avg_rate_squared - avg_rate * avg_rate) > 0 
+            THEN (avg_icr_rate_product - avg_icr * avg_rate) / 
+                 (SQRT(avg_icr_squared - avg_icr * avg_icr) * 
+                  SQRT(avg_rate_squared - avg_rate * avg_rate))
+            ELSE NULL
+        END AS rolling_correlation
+    FROM rolling_correlation
+),
+-- Get most recent correlation for each company (with at least 10 years total)
+latest_correlation AS (
+    SELECT 
+        c.company_id,
+        c.company_name,
+        c.gics_sector_name,
+        c.country_id,
+        MAX(c.year) AS latest_year,
+        COUNT(DISTINCT cm.year) AS total_years_data
+    FROM correlation_calc c
+    JOIN combined cm ON c.company_id = cm.company_id
+    GROUP BY c.company_id, c.company_name, c.gics_sector_name, c.country_id
+    HAVING COUNT(DISTINCT cm.year) >= 10  -- At least 10 years of data
 )
 SELECT 
-    gics_sector_name,
-    COUNT(*) AS company_count,
-    ROUND(AVG(avg_icr), 2) AS sector_avg_icr,
-    ROUND(AVG(avg_rate), 2) AS sector_avg_rate,
+    lc.company_name,
+    lc.gics_sector_name,
+    lc.country_id,
+    lc.total_years_data,
+    ROUND(cc.avg_icr, 2) AS avg_icr_recent_5y,
+    ROUND(cc.rolling_correlation, 4) AS correlation_with_policy_rate,
     CASE 
-        WHEN AVG(avg_icr) < 3 THEN 'High Risk (Low Coverage)'
-        WHEN AVG(avg_icr) < 5 THEN 'Moderate Risk'
-        ELSE 'Low Risk (High Coverage)'
-    END AS sector_risk_profile
-FROM company_stats
-GROUP BY gics_sector_name
-ORDER BY sector_avg_icr ASC;
+        WHEN cc.rolling_correlation < -0.3 THEN 'Highly Rate-Sensitive'
+        WHEN cc.rolling_correlation < 0 THEN 'Moderately Rate-Sensitive'
+        WHEN cc.rolling_correlation < 0.3 THEN 'Rate-Insulated'
+        ELSE 'Positively Correlated'
+    END AS rate_sensitivity_classification
+FROM latest_correlation lc
+JOIN correlation_calc cc ON lc.company_id = cc.company_id AND lc.latest_year = cc.year
+WHERE cc.rolling_correlation IS NOT NULL
+ORDER BY cc.rolling_correlation ASC
+LIMIT 50;
 
 
 -- ############################################################################
@@ -558,25 +604,28 @@ ORDER BY zombie_pct DESC;
 -- Focus on consumer/housing-related sectors
 -- ----------------------------------------------------------------------------
 
-WITH housing_data AS (
+WITH housing_quarterly AS (
     SELECT 
         country_id,
         strftime('%Y', indicator_date) AS year,
-        strftime('%m', indicator_date) AS month,
+        CASE 
+            WHEN CAST(strftime('%m', indicator_date) AS INTEGER) BETWEEN 1 AND 3 THEN 'Q1'
+            WHEN CAST(strftime('%m', indicator_date) AS INTEGER) BETWEEN 4 AND 6 THEN 'Q2'
+            WHEN CAST(strftime('%m', indicator_date) AS INTEGER) BETWEEN 7 AND 9 THEN 'Q3'
+            ELSE 'Q4'
+        END AS quarter,
         AVG(indicator_value) AS housing_starts
     FROM macro_indicators
     WHERE indicator_name LIKE '%Housing Start%'
-       OR indicator_name LIKE '%Building Permit%'
-       OR indicator_name LIKE '%Construction%'
-    GROUP BY country_id, strftime('%Y', indicator_date), strftime('%m', indicator_date)
+    GROUP BY country_id, year, quarter
 ),
 housing_lagged AS (
     SELECT 
         country_id,
-        year,
+        year || '-' || quarter AS year_quarter,
         housing_starts,
-        LAG(housing_starts, 2) OVER (PARTITION BY country_id ORDER BY year, month) AS housing_lag_2q
-    FROM housing_data
+        LAG(housing_starts, 2) OVER (PARTITION BY country_id ORDER BY year, quarter) AS housing_lag_2q
+    FROM housing_quarterly
 ),
 company_revenue AS (
     SELECT 
@@ -585,13 +634,18 @@ company_revenue AS (
         c.country_id,
         c.gics_sector_name,
         strftime('%Y', f.period_end_date) AS year,
+        CASE 
+            WHEN CAST(strftime('%m', f.period_end_date) AS INTEGER) BETWEEN 1 AND 3 THEN 'Q1'
+            WHEN CAST(strftime('%m', f.period_end_date) AS INTEGER) BETWEEN 4 AND 6 THEN 'Q2'
+            WHEN CAST(strftime('%m', f.period_end_date) AS INTEGER) BETWEEN 7 AND 9 THEN 'Q3'
+            ELSE 'Q4'
+        END AS quarter,
         f.revenue,
-        LAG(f.revenue, 1) OVER (PARTITION BY f.company_id ORDER BY f.period_end_date) AS prev_revenue,
         (f.revenue - LAG(f.revenue, 1) OVER (PARTITION BY f.company_id ORDER BY f.period_end_date)) 
             / NULLIF(LAG(f.revenue, 1) OVER (PARTITION BY f.company_id ORDER BY f.period_end_date), 0) * 100 AS revenue_growth
     FROM financials f
     JOIN companies c ON f.company_id = c.company_id
-    WHERE f.period_type = 'ANNUAL'
+    WHERE f.period_type = 'QUARTERLY'
       AND f.revenue IS NOT NULL
       AND c.gics_sector_name IN ('Consumer Discretionary', 'Materials', 'Industrials')
 )
@@ -599,10 +653,10 @@ SELECT
     cr.gics_sector_name,
     cr.country_id,
     COUNT(*) AS observations,
-    ROUND(AVG(cr.revenue_growth), 2) AS avg_revenue_growth,
+    ROUND(AVG(cr.revenue_growth), 2) AS avg_revenue_growth_pct,
     ROUND(AVG(h.housing_lag_2q), 2) AS avg_housing_lag_2q
 FROM company_revenue cr
-LEFT JOIN housing_lagged h ON cr.country_id = h.country_id AND cr.year = h.year
+LEFT JOIN housing_lagged h ON cr.country_id = h.country_id AND cr.year || '-' || cr.quarter = h.year_quarter
 WHERE cr.revenue_growth IS NOT NULL
   AND h.housing_lag_2q IS NOT NULL
 GROUP BY cr.gics_sector_name, cr.country_id
@@ -611,7 +665,7 @@ ORDER BY cr.gics_sector_name, cr.country_id;
 
 -- ----------------------------------------------------------------------------
 -- UC4-Q2: Revenue Volatility as Cyclicality Proxy (Data-Driven Classification)
--- Compute rolling STDDEV of revenue growth
+-- Compute 10-year rolling STDDEV of revenue growth
 -- Classify companies into quartiles: High Volatility = Cyclical
 -- ----------------------------------------------------------------------------
 
@@ -620,7 +674,7 @@ WITH revenue_growth AS (
         f.company_id,
         c.company_name,
         c.gics_sector_name,
-        strftime('%Y', f.period_end_date) AS year,
+        CAST(strftime('%Y', f.period_end_date) AS INTEGER) AS year,
         f.revenue,
         (f.revenue - LAG(f.revenue, 1) OVER (PARTITION BY f.company_id ORDER BY f.period_end_date)) 
             / NULLIF(LAG(f.revenue, 1) OVER (PARTITION BY f.company_id ORDER BY f.period_end_date), 0) * 100 AS rev_growth
@@ -629,25 +683,55 @@ WITH revenue_growth AS (
     WHERE f.period_type = 'ANNUAL'
       AND f.revenue IS NOT NULL
 ),
-volatility_calc AS (
+-- Calculate 10-year rolling volatility for each company-year
+rolling_volatility AS (
     SELECT 
-        company_id,
-        company_name,
-        gics_sector_name,
-        COUNT(*) AS years_of_data,
-        AVG(rev_growth) AS avg_growth,
-        -- Standard deviation approximation
-        SQRT(AVG(rev_growth * rev_growth) - AVG(rev_growth) * AVG(rev_growth)) AS volatility
-    FROM revenue_growth
-    WHERE rev_growth IS NOT NULL
-    GROUP BY company_id, company_name, gics_sector_name
-    HAVING COUNT(*) >= 10
+        rg1.company_id,
+        rg1.company_name,
+        rg1.gics_sector_name,
+        rg1.year,
+        COUNT(rg2.year) AS window_size,
+        AVG(rg2.rev_growth) AS avg_growth_10y,
+        -- Standard deviation over 10-year window
+        SQRT(AVG(rg2.rev_growth * rg2.rev_growth) - AVG(rg2.rev_growth) * AVG(rg2.rev_growth)) AS rolling_volatility
+    FROM revenue_growth rg1
+    JOIN revenue_growth rg2 ON rg1.company_id = rg2.company_id 
+                             AND rg2.year BETWEEN (rg1.year - 9) AND rg1.year
+                             AND rg2.rev_growth IS NOT NULL
+    WHERE rg1.rev_growth IS NOT NULL
+    GROUP BY rg1.company_id, rg1.company_name, rg1.gics_sector_name, rg1.year
+    HAVING COUNT(rg2.year) = 10  -- Full 10-year window
+),
+-- Get most recent rolling volatility for each company
+latest_volatility AS (
+    SELECT 
+        rv.company_id,
+        rv.company_name,
+        rv.gics_sector_name,
+        MAX(rv.year) AS latest_year,
+        COUNT(DISTINCT rg.year) AS total_years_data
+    FROM rolling_volatility rv
+    JOIN revenue_growth rg ON rv.company_id = rg.company_id
+    GROUP BY rv.company_id, rv.company_name, rv.gics_sector_name
+    HAVING COUNT(DISTINCT rg.year) >= 10  -- At least 10 years total
+),
+company_volatility AS (
+    SELECT 
+        lv.company_id,
+        lv.company_name,
+        lv.gics_sector_name,
+        lv.total_years_data,
+        rv.rolling_volatility AS volatility,
+        rv.avg_growth_10y AS avg_growth
+    FROM latest_volatility lv
+    JOIN rolling_volatility rv ON lv.company_id = rv.company_id AND lv.latest_year = rv.year
+    WHERE rv.rolling_volatility IS NOT NULL
 ),
 quartiles AS (
     SELECT 
         *,
         NTILE(4) OVER (ORDER BY volatility) AS volatility_quartile
-    FROM volatility_calc
+    FROM company_volatility
 )
 SELECT 
     volatility_quartile,
@@ -668,7 +752,7 @@ ORDER BY volatility_quartile;
 
 -- ----------------------------------------------------------------------------
 -- UC4-Q3: Downturn Resilience (Cash Flow Focus)
--- Identify GDP contraction years, find companies with positive FCF
+-- Identify GDP contraction quarters, find companies with positive FCF
 -- despite negative revenue growth
 -- ----------------------------------------------------------------------------
 
@@ -676,11 +760,17 @@ WITH gdp_contraction AS (
     SELECT 
         country_id,
         strftime('%Y', indicator_date) AS year,
+        CASE 
+            WHEN CAST(strftime('%m', indicator_date) AS INTEGER) BETWEEN 1 AND 3 THEN 'Q1'
+            WHEN CAST(strftime('%m', indicator_date) AS INTEGER) BETWEEN 4 AND 6 THEN 'Q2'
+            WHEN CAST(strftime('%m', indicator_date) AS INTEGER) BETWEEN 7 AND 9 THEN 'Q3'
+            ELSE 'Q4'
+        END AS quarter,
         AVG(indicator_value) AS gdp_growth
     FROM macro_indicators
     WHERE indicator_name LIKE '%Real GDP%yoy%'
-    GROUP BY country_id, strftime('%Y', indicator_date)
-    HAVING AVG(indicator_value) < 0  -- Contraction years
+    GROUP BY country_id, year, quarter
+    HAVING AVG(indicator_value) < 0  -- Contraction quarters
 ),
 company_performance AS (
     SELECT 
@@ -689,14 +779,19 @@ company_performance AS (
         c.country_id,
         c.gics_sector_name,
         strftime('%Y', f.period_end_date) AS year,
+        CASE 
+            WHEN CAST(strftime('%m', f.period_end_date) AS INTEGER) BETWEEN 1 AND 3 THEN 'Q1'
+            WHEN CAST(strftime('%m', f.period_end_date) AS INTEGER) BETWEEN 4 AND 6 THEN 'Q2'
+            WHEN CAST(strftime('%m', f.period_end_date) AS INTEGER) BETWEEN 7 AND 9 THEN 'Q3'
+            ELSE 'Q4'
+        END AS quarter,
         f.revenue,
         f.free_cash_flow,
-        LAG(f.revenue, 1) OVER (PARTITION BY f.company_id ORDER BY f.period_end_date) AS prev_revenue,
         (f.revenue - LAG(f.revenue, 1) OVER (PARTITION BY f.company_id ORDER BY f.period_end_date)) 
             / NULLIF(LAG(f.revenue, 1) OVER (PARTITION BY f.company_id ORDER BY f.period_end_date), 0) * 100 AS rev_growth
     FROM financials f
     JOIN companies c ON f.company_id = c.company_id
-    WHERE f.period_type = 'ANNUAL'
+    WHERE f.period_type = 'QUARTERLY'
       AND c.gics_sector_name != 'Financials'
       AND f.revenue IS NOT NULL
       AND f.free_cash_flow IS NOT NULL
@@ -705,6 +800,7 @@ resilient_companies AS (
     SELECT 
         cp.country_id,
         cp.year,
+        cp.quarter,
         cp.gics_sector_name,
         cp.company_name,
         cp.rev_growth,
@@ -715,19 +811,19 @@ resilient_companies AS (
             ELSE 0 
         END AS is_resilient
     FROM company_performance cp
-    JOIN gdp_contraction gc ON cp.country_id = gc.country_id AND cp.year = gc.year
+    JOIN gdp_contraction gc ON cp.country_id = gc.country_id AND cp.year = gc.year AND cp.quarter = gc.quarter
     WHERE cp.rev_growth IS NOT NULL
 )
 SELECT 
     country_id,
-    year,
+    year || '-' || quarter AS year_quarter,
     ROUND(gdp_growth, 2) AS gdp_growth_pct,
     COUNT(*) AS total_companies,
     SUM(is_resilient) AS resilient_companies,
     ROUND(SUM(is_resilient) * 100.0 / COUNT(*), 1) AS resilience_rate_pct
 FROM resilient_companies
-GROUP BY country_id, year, gdp_growth
-ORDER BY year, country_id;
+GROUP BY country_id, year, quarter, gdp_growth
+ORDER BY year, quarter, country_id;
 
 
 -- ############################################################################
