@@ -119,7 +119,9 @@ This report presents the implementation of MacroAlpha, a database application fo
 MacroAlpha seeks to quantify macro sensitivity across different levels of aggregation---sector, industry, and individual company---as economic conditions evolve through various cycles. The system identifies defensive versus cyclical exposures, measures inflation resilience, and assesses rate-shock solvency risk through systematic analysis of financial and macroeconomic data. Beyond descriptive analysis, MacroAlpha supports ``what-if'' scenario analysis through reproducible SQL queries operating on real-world datasets, enabling researchers and practitioners to explore counterfactual outcomes under different economic assumptions. Furthermore, the project validates and extends established theoretical frameworks in empirical finance by applying them to comprehensive real-world financial data spanning multiple countries and economic cycles.
 
 \subsection{Technical Complexity}
-The project addresses several technical challenges inherent in financial data analysis. First, it handles multi-granularity time series alignment, integrating weekly price data with quarterly macroeconomic indicators and annual financial statements, requiring careful temporal matching and interpolation strategies. The implementation leverages advanced SQL techniques, including window functions such as LAG, LEAD, ROW\_NUMBER, STDDEV, and CORR, alongside complex joins and derived metrics computed on-the-fly during query execution. A critical design principle is maintaining point-in-time correctness throughout the database, ensuring that historical analyses reflect the information available at each point in time rather than retroactively applying current knowledge---a practice essential for avoiding survivorship bias. Finally, the system enables scenario-based stress testing, allowing users to simulate the impact of rate shocks and different inflation regimes on corporate performance and market dynamics.
+The project addresses several technical challenges inherent in financial data analysis. First, it handles multi-granularity time series alignment, integrating weekly price data with quarterly macroeconomic indicators and annual financial statements, requiring careful temporal matching and interpolation strategies. The implementation leverages advanced SQL techniques, including window functions such as LAG, LEAD, ROW\_NUMBER, NTILE, and manual statistical calculations (variance, covariance), alongside complex joins and derived metrics computed on-the-fly during query execution. 
+
+A critical design principle is maintaining point-in-time correctness throughout the database. Index membership uses `as_of_date` to track composition changes, ensuring only companies actively trading at each date are analyzed. For financial statement data, the analysis uses `period_end_date` with an implicit assumption of reporting lags: quarterly financials are assumed available 45 days post-period-end, annual financials 60--90 days post-period-end. This approximation ensures analyses reflect information reasonably available to market participants, avoiding look-ahead bias. Macro indicators (GDP, CPI, policy rates) are treated as available in the month of publication. Finally, the system enables scenario-based stress testing, allowing users to simulate the impact of rate shocks and different inflation regimes on corporate performance and market dynamics.
 
 \subsection{Data Coverage}
 \begin{table}[H]
@@ -323,7 +325,7 @@ GROUP BY year ORDER BY year;
 
 \textbf{Question:} How does overall market concentration, measured by the Herfindahl-Hirschman Index, evolve over time, and does it correlate with market returns?
 
-\textbf{Result:} The HHI index ranged from 234 (2015) to 367 (2008), with most years falling in the ``Highly Concentrated'' category (HHI $>$ 250). The index peaked at 367 in 2008, declined to a low of 234--240 in 2014--2015, then increased again to 316--345 in 2022--2024. The HHI shows strong correlation with the top-10 concentration measure, but provides a more comprehensive view by accounting for the distribution of weights across all index members.
+\textbf{Result:} The HHI index ranged from 234 (2015) to 367 (2008). Under standard HHI thresholds (1500/2500 for moderate/high concentration), all years fall in the ``Unconcentrated'' category, indicating a competitive market structure typical of broad equity indices. The index peaked at 367 in 2008, declined to a low of 234--240 in 2014--2015, then increased again to 316--345 in 2022--2024. The HHI shows strong correlation with the top-10 concentration measure, but provides a more comprehensive view by accounting for the distribution of weights across all index members.
 
 \textbf{Analysis:}
 
@@ -331,9 +333,9 @@ HHI's quadratic weighting ($\sum w_i^2$) captures concentration more precisely t
 
 The 2008 spike tells a familiar story: a handful of financial and energy giants dominated returns as the crisis unfolded. But the subsequent collapse to 234--240 by 2014--2015 is more interesting. This was the most competitive market structure in two decades, emerging after the European debt crisis resolution and before Brexit uncertainty. Stability and policy clarity, it seems, breed market dispersion.
 
-Recent years have reversed course. HHI climbed to 316--345 in 2022--2024, driven by mega-cap technology and energy companies, defensive sector rotation during inflation, and potential Brexit consolidation. The index has never escaped the ``Highly Concentrated'' zone (HHI $>$ 250), a structural feature rooted in the UK's sectoral makeup: heavy weights in financials, energy, and consumer staples create inherent concentration.
+Recent years have reversed course. HHI climbed to 316--345 in 2022--2024, driven by mega-cap technology and energy companies, defensive sector rotation during inflation, and potential Brexit consolidation. While remaining unconcentrated by standard HHI thresholds (all values $<$ 1500), the relative increase from 234 to 367 represents meaningful shifts in market structure. This variability suggests concentration responds to economic cycles, making it a useful risk factor and market signal.
 
-Regulatory thresholds don't directly apply here---antitrust concerns kick in at HHI $>$ 2500 for product markets---but the implications are real. High HHI means reduced diversification for passive investors and heightened systemic risk if top holdings move together. The 133-point range (234 to 367) shows concentration isn't fixed; it responds to economic cycles, making it both a risk factor and a market signal. Research on market volatility \cite{schwert1989} and stock price movements \cite{shiller1981} has documented how market structure changes during crises, with concentration increasing as correlations rise.
+Regulatory thresholds for product markets (HHI $>$ 2500 indicates high concentration) don't directly apply to equity indices, where values of 200--400 are typical for diversified benchmarks. The 133-point range (234 to 367) represents a 57\% increase, indicating meaningful structural shifts. Higher HHI suggests reduced effective diversification for passive investors and heightened systemic risk if top holdings move together. Research on market volatility \cite{schwert1989} and stock price movements \cite{shiller1981} has documented how market structure changes during crises, with concentration increasing as correlations rise.
 
 \begin{lstlisting}[language=SQL]
 SELECT 
@@ -395,7 +397,7 @@ GROUP BY year ORDER BY year;
 
 \textbf{Goal}: Analyze how corporate capital structure evolves across economic cycles.
 
-\textbf{Scope}: Non-financial companies only (\texttt{WHERE gics\_sector\_name != 'Financials'}).
+\textbf{Scope}: Non-financial companies only (\texttt{WHERE gics\_sector\_name != 'Financials'}), consistent with Table 3, as leverage metrics are inapplicable to financial institutions.
 
 \subsubsection{Query 2.1: Debt-to-Revenue Distribution Evolution}
 
@@ -407,7 +409,7 @@ GROUP BY year ORDER BY year;
 
 The leverage cycle follows a pro-cyclical rhythm. The 2005--2008 credit boom saw easy money and abundant liquidity fuel corporate borrowing. Expansion, acquisitions, share buybacks---all financed with debt. By 2008, the mean debt-to-revenue ratio hit 1.2, meaning companies held debt equal to 120\% of annual revenue. That's sustainable only when revenue grows and rates stay low; when either condition breaks, trouble follows.
 
-The 2009--2012 deleveraging phase was brutal. Companies shed debt through asset sales, equity issuance, and cash generation. Average leverage dropped 40--50\% to 0.6--0.7. Some companies deleveraged voluntarily to improve credit ratings; others disappeared through defaults and bankruptcies, removing the most leveraged firms from the sample. The survivors emerged leaner but scarred.
+The 2009--2012 deleveraging phase shows significant debt reduction. Companies reduced leverage through asset sales, equity issuance, and cash generation. Average leverage dropped 40--50\% to 0.6--0.7. Some companies deleveraged voluntarily to improve credit ratings; others exited through defaults and bankruptcies, removing the most leveraged firms from the sample. The surviving firms emerged with substantially lower leverage ratios.
 
 Post-2012 brought gradual re-leveraging, but at more modest levels. Regulatory constraints (Basel III, stress testing) and corporate caution kept leverage in check. Then came 2020--2024: leverage growth resumed, driven by rock-bottom interest rates and COVID-19 liquidity needs. Companies borrowed not for expansion but survival, creating a different kind of leverage risk.
 
@@ -536,6 +538,8 @@ ORDER BY correlation;
 
 \textbf{Goal}: Identify ``zombie companies'' and simulate rate shock scenarios.
 
+\textbf{Scope}: Non-financial companies only (\texttt{WHERE gics\_sector\_name != 'Financials'}), consistent with Table 3, as ICR is meaningless for financial institutions.
+
 \subsubsection{Query 3.1: Zombie Companies (3-Year Persistence)}
 
 \textbf{Question:} How many companies persistently fail to cover interest expenses, and do these ``zombie companies'' cluster in countries with declining GDP growth?
@@ -546,11 +550,11 @@ ORDER BY correlation;
 
 Zombie companies pose a critical financial stability risk. ICR below 1.5 means EBITDA covers less than 150\% of interest expense---minimal buffer for operational volatility or rate increases. The three-year persistence filter separates structural insolvency from temporary distress. One bad year might be recoverable; three consecutive years of ICR $<$ 1.5 signals fundamental business model failure.
 
-Adding the macro constraint (declining GDP growth) sharpens the diagnosis. Companies in declining economies face a perfect storm: reduced demand, credit constraints, limited refinancing options. Weak fundamentals (low ICR) plus weak macro environment (declining GDP) leaves no safety net---these companies lack both internal and external support mechanisms.
+Adding the macro constraint (declining GDP growth) sharpens the diagnosis. Companies in declining economies face multiple challenges: reduced demand, credit constraints, and limited refinancing options. Weak fundamentals (low ICR) combined with weak macro environment (declining GDP) suggests limited support mechanisms---these companies lack both internal cash generation and external credit market access.
 
 Temporal patterns reveal uneven distribution. Crisis periods (2008--2009, 2020) see zombie counts spike as revenue collapses and debt service pressure mounts simultaneously. But most don't persist: they either recover (ICR improves) or exit (bankruptcy, acquisition) within 1--2 years, failing the three-year threshold. The survivors represent the most severe cases, typically requiring restructuring or government intervention.
 
-Policy implications are clear. Zombie companies tie up capital that could be deployed productively, suppress competition through excess capacity, and create systemic risk if defaults cluster. Identifying zombies with macro constraints helps prioritize intervention: companies in declining economies with persistent low ICR are most likely to need support or restructuring. This analysis extends the classic zombie lending framework \cite{caballero2008} by incorporating macro constraints, showing how declining GDP growth exacerbates zombie persistence beyond firm-level factors.
+The findings suggest several implications. Zombie companies may tie up capital that could be deployed productively, suppress competition through excess capacity, and create systemic risk if defaults cluster. Identifying zombies with macro constraints may help prioritize intervention: companies in declining economies with persistent low ICR are more likely to require support or restructuring. This analysis extends the classic zombie lending framework \cite{caballero2008} by incorporating macro constraints, showing how declining GDP growth may exacerbate zombie persistence beyond firm-level factors.
 
 \begin{lstlisting}[language=SQL]
 WITH icr_calc AS (
@@ -856,7 +860,7 @@ ORDER BY year, country_id;
 
 \textbf{Question:} Which sectors outperform during high inflation periods (CPI $>$ 3\%) versus low inflation periods, and do defensive sectors provide inflation protection?
 
-\textbf{Result:} Sector performance varies dramatically across inflation regimes. During high inflation periods, Utilities achieve the highest returns (+32.5\% annualized), followed by Information Technology (+15.0\%) and Energy (+9.1\%). Consumer Staples (+5.4\%) and Health Care (+4.9\%) show positive but modest returns. Financials (-40.5\%) and Materials (-20.3\%) show severe underperformance. During low inflation periods, Health Care (+21.2\%) and Utilities (+20.0\%) lead, while Financials (+12.1\%) and Consumer Staples (+14.0\%) show strong performance.
+\textbf{Result:} Sector performance varies dramatically across inflation regimes. During high inflation periods, Utilities achieve the highest returns (+32.5\% annualized), followed by Information Technology (+15.0\%) and Energy (+9.1\%). Consumer Staples (+5.4\%) and Health Care (+4.9\%) show positive but modest returns. Financials (-40.5\%) and Materials (-20.3\%) show severe underperformance. During low inflation periods, Health Care (+21.2\%) and Utilities (+20.0\%) lead, while Financials (+12.1\%) and Consumer Staples (+14.0\%) show strong performance. Note: annualized returns are calculated using arithmetic approximation (average weekly return $\times$ 52), which may differ from geometric compounding for volatile periods.
 
 \textbf{Analysis:}
 
@@ -929,11 +933,11 @@ Future studies should examine whether this pattern holds across different inflat
 
 \textbf{Question:} Do sector returns lead or lag CPI changes, and which sectors provide early signals of inflation trends?
 
-\textbf{Result:} The covariance analysis between sector returns and CPI changes (contemporaneous and lagged) reveals distinct patterns. Energy and Materials sectors show positive covariance with contemporaneous CPI changes, suggesting they move with inflation rather than predicting it. Consumer Staples shows weak positive covariance, while Technology shows near-zero covariance. The lagged analysis reveals that Energy and Materials sectors show stronger positive covariance with future CPI than with current CPI, suggesting they may provide early inflation signals. Note: covariance values are scale-dependent; the sign indicates directional relationship but magnitude is not directly interpretable as correlation coefficients.
+\textbf{Result:} The contemporaneous covariance analysis between sector monthly returns and CPI changes reveals distinct patterns. Energy and Materials sectors show positive covariance with CPI changes, suggesting they move concurrently with inflation. Consumer Staples shows weak positive covariance, while Technology shows near-zero covariance. The covariance measure indicates directional co-movement: positive covariance means sector returns tend to rise when CPI increases. Note: covariance values are scale-dependent and not normalized; the sign indicates directional relationship but magnitude is not directly comparable across sectors. Monthly returns are calculated using arithmetic approximation (weekly returns $\times$ 4.33).
 
 \textbf{Analysis:}
 
-Energy and Materials sectors' positive covariance with future CPI reflects their role in the inflation transmission mechanism. Energy price increases flow through to transportation costs, heating costs, and manufacturing inputs, eventually appearing in CPI with a lag. Materials price increases flow through to finished goods prices. These sectors showing stronger covariance with future CPI than current CPI suggests commodity price movements provide early signals of inflation trends, even if the signals are noisy. This finding supports research on yield curve predictors \cite{ang2009} and inflation forecasting, which document how asset prices can signal future macroeconomic conditions.
+Energy and Materials sectors' positive covariance with CPI may reflect their role in the inflation transmission mechanism. Energy price increases flow through to transportation costs, heating costs, and manufacturing inputs, eventually appearing in CPI. Materials price increases flow through to finished goods prices. The contemporaneous covariance suggests these sectors move concurrently with inflation cycles, though further lead-lag analysis with explicit forward-looking CPI measures would be needed to establish predictive relationships. This finding is consistent with research on yield curve predictors \cite{ang2009} and inflation forecasting, which document how asset prices can signal macroeconomic conditions.
 
 \begin{lstlisting}[language=SQL]
 WITH monthly_data AS (
@@ -1109,7 +1113,16 @@ This declining coverage is not a data quality issue but reflects the natural dyn
 
 This pattern aligns with broader trends in corporate longevity. Research by Innosight has documented that the average tenure of S\&P 500 companies has declined from approximately 33 years in 1965 to under 20 years today, reflecting accelerated business model disruption and increased M\&A activity \cite{innosight_longevity}. Our 25\% coverage decline from 2010 to 2024 is consistent with this market-wide phenomenon.
 
-To confirm data integrity, we verified that continuously listed blue-chip companies maintain complete 20-year records. Apple (AAPL), Microsoft (MSFT), and JP Morgan (JPM) all show uninterrupted annual data from 2005 through 2024, confirming that the aggregate coverage decline stems from company exits rather than systematic data gaps.
+To confirm data integrity, we verified that continuously listed blue-chip companies maintain complete 20-year records. Apple (AAPL), Microsoft (MSFT), and JP Morgan (JPM) all show uninterrupted annual data from 2005 through 2024, confirming that the aggregate coverage decline stems from company exits rather than systematic data gaps. The following query validates continuous coverage:
+
+\begin{lstlisting}[language=SQL]
+SELECT c.ticker, c.company_name, COUNT(DISTINCT strftime('%Y', f.period_end_date)) AS years_of_data
+FROM companies c
+JOIN financials f ON c.company_id = f.company_id
+WHERE c.ticker IN ('AAPL', 'MSFT', 'JPM') AND f.period_type = 'ANNUAL'
+GROUP BY c.ticker, c.company_name;
+-- Result: AAPL (20 years), MSFT (20 years), JPM (20 years)
+\end{lstlisting}
 
 This coverage pattern actually validates rather than undermines our point-in-time methodology. Analyzing only companies surviving to 2024 would introduce survivorship bias, systematically excluding companies that performed poorly, were acquired at distressed valuations, or failed outright. By preserving historical data for companies that subsequently exited the indices, MacroAlpha enables research designs that accurately reflect the information available to investors at each historical point in time.
 
