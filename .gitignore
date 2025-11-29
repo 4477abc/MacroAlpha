@@ -6,3 +6,6 @@ macroalpha.db
 *.out
 *.toc
 venv/
+
+# macOS system files
+.DS_Store
