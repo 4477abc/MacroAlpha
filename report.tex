@@ -102,7 +102,7 @@
 \maketitle
 
 \begin{abstract}
-This report presents the implementation of MacroAlpha, a database application for global macroeconomic sensitivity and corporate performance analysis. The system integrates financial and macroeconomic data from Bloomberg Terminal into a normalized relational database covering 1,274 companies across 5 countries over a 20-year horizon (2005--2024). The implementation includes 15 SQL queries across 5 use cases covering market concentration analysis, corporate leverage cycles, rate-shock stress testing, macro lead-lag relationships, and sector rotation analysis. Key empirical findings align with established academic research: counter-cyclical deleveraging patterns consistent with credit cycle theories \cite{kiyotaki1997,bernanke1999}, market concentration dynamics during crises matching volatility research \cite{schwert1989,shiller1981}, sector performance variations across inflation regimes supporting inflation hedging literature \cite{bekaert2010}, and revenue volatility patterns confirming idiosyncratic risk studies \cite{campbell2001}. The project demonstrates database design, SQL development, Python data engineering, and query optimization techniques, while contributing empirical validation of theoretical frameworks using real-world financial data.
+This report presents the implementation of MacroAlpha, a database application for global macroeconomic sensitivity and corporate performance analysis. The system integrates financial and macroeconomic data extracted from Bloomberg Terminal (using Bloomberg Spreadsheet Builder and Terminal functions) into a normalized relational database covering 1,274 companies across 5 countries over a 20-year horizon (2005--2024). The implementation includes 15 SQL queries across 5 use cases covering market concentration analysis, corporate leverage cycles, rate-shock stress testing, macro lead-lag relationships, and sector rotation analysis. Key empirical findings align with established academic research: counter-cyclical deleveraging patterns consistent with credit cycle theories \cite{kiyotaki1997,bernanke1999}, market concentration dynamics during crises matching volatility research \cite{schwert1989,shiller1981}, sector performance variations across inflation regimes supporting inflation hedging literature \cite{bekaert2010}, and revenue volatility patterns confirming idiosyncratic risk studies \cite{campbell2001}. The project demonstrates database design, SQL development, Python data engineering, and query optimization techniques, while contributing empirical validation of theoretical frameworks using real-world financial data.
 
 \textbf{Keywords:} Database Design, Financial Data Analysis, SQL Queries, Data Pipeline, Performance Optimization, Empirical Finance, Credit Cycles, Market Concentration
 \end{abstract}
@@ -151,13 +151,13 @@ interest\_rates & 9,941 & 2005--2024 \\
 
 \subsection{Bloomberg Terminal Data}
 
-All data was extracted from Bloomberg Terminal using the following methods:
+All data was extracted from Bloomberg Terminal using Bloomberg Spreadsheet Builder and Terminal functions. Bloomberg Spreadsheet Builder enables bulk time-series exports in Excel format, while Terminal functions provide direct query access to specific data types:
 
 \begin{enumerate}
-    \item \textbf{Equity Prices}: Spreadsheet Builder $\rightarrow$ Time Series Table, Weekly frequency (Friday close), fields: PX\_LAST, DAY\_TO\_DAY\_TOT\_RETURN\_GROSS\_DVDS
-    \item \textbf{Financial Statements}: \texttt{<FA>} function for standardized income statement, balance sheet, and cash flow items
-    \item \textbf{Macro Indicators}: \texttt{<ECST>} for GDP, CPI, policy rates across 5 countries (US, UK, DE, JP, CN)
-    \item \textbf{Index Membership}: Historical constituents for S\&P 500 and FTSE 100 with effective dates and weights
+    \item \textbf{Equity Prices}: Bloomberg Spreadsheet Builder $\rightarrow$ Time Series Table, Weekly frequency (Friday close), fields: PX\_LAST, DAY\_TO\_DAY\_TOT\_RETURN\_GROSS\_DVDS
+    \item \textbf{Financial Statements}: Bloomberg Spreadsheet Builder $\rightarrow$ Time Series Table with \texttt{<FA>} fundamental data fields for standardized income statement, balance sheet, and cash flow items
+    \item \textbf{Macro Indicators}: Bloomberg Spreadsheet Builder $\rightarrow$ Time Series Table with \texttt{<ECST>} economic statistics for GDP, CPI, policy rates across 5 countries (US, UK, DE, JP, CN)
+    \item \textbf{Index Membership}: Bloomberg Terminal function \texttt{MEMB <GO>} for historical S\&P 500 and FTSE 100 constituents with effective dates and weights
 \end{enumerate}
 
 \subsection{Data Files}
