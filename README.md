@@ -23,7 +23,7 @@ Data was extracted from Bloomberg Terminal and exported to cleaned CSV/Excel fil
 ### Bloomberg Terminal Extraction Process
 
 #### Overview
-Data extraction used multiple Bloomberg Terminal tools: Bloomberg Spreadsheet Builder for bulk time-series data (equity prices, financial statements, macro indicators) and Terminal functions for specific queries (index membership via `MEMB <GO>`, company data via `DES <GO>`). To manage volume (1000+ tickers × 20 years), Spreadsheet Builder extractions were batched (100-200 tickers per request) and concatenated locally. Returns, rolling correlations, and volatility measures are computed in the database using SQL window functions rather than pre-computed in Bloomberg.
+Data extraction used multiple Bloomberg Terminal tools: Bloomberg Spreadsheet Builder for bulk time-series data (equity prices, financial statements, macro indicators) and Terminal functions for specific queries (index membership via `MEMB <GO>`, company data via `DES <GO>`). To manage volume (1000+ tickers × 20 years), Spreadsheet Builder extractions were batched (100-200 tickers per request) and concatenated locally. Returns, rolling correlations, and volatility measures are computed in the database using SQL window functions.
 
 #### Step-by-Step Export Instructions
 
