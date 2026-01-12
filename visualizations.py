@@ -90,6 +90,7 @@ def plot_uc1_concentration():
     ax2.set_xlabel('Year')
     ax2.set_ylabel('HHI Index')
     ax2.set_title('UC1-Q2: Herfindahl-Hirschman Index (Market Concentration)')
+    ax2.set_ylim(0, df2['hhi'].max() * 1.2)
     ax2.legend()
     ax2.tick_params(axis='x', rotation=45)
     
@@ -259,6 +260,7 @@ def plot_uc4_volatility():
     ax.set_xlabel('Average Revenue Volatility (%)')
     ax.set_ylabel('GICS Sector')
     ax.set_title('UC4-Q2: Revenue Volatility by Sector (Cyclicality Proxy)')
+    ax.set_xlim(0, max(100, df['avg_vol'].max() * 1.1))
     ax.legend(loc='lower right')
     
     # Add labels
@@ -364,16 +366,22 @@ def plot_uc5_rate_sensitivity():
     # Color: negative = rate sensitive (red), positive = rate beneficiary (green)
     colors = [COLORS['success'] if s < 0 else COLORS['highlight'] for s in df['sensitivity']]
     
-    bars = ax.barh(df['gics_sector_name'], df['sensitivity'] * 1000, color=colors, alpha=0.85)
+    sensitivity_scaled = df['sensitivity'] * 1000
+    bars = ax.barh(df['gics_sector_name'], sensitivity_scaled, color=colors, alpha=0.85)
     
     ax.axvline(x=0, color='black', linewidth=1)
     ax.set_xlabel('Rate Sensitivity (×1000)')
     ax.set_ylabel('GICS Sector')
     ax.set_title('UC5-Q3: Sector Rate Sensitivity (Correlation with 10Y Yield Changes)')
     
+    # Set xlim to include negative range, ensuring 0 is visible
+    x_min = min(sensitivity_scaled.min() * 1.2, -10)
+    x_max = max(sensitivity_scaled.max() * 1.2, 10)
+    ax.set_xlim(x_min, x_max)
+    
     # Add labels
-    ax.text(-10, -0.8, '← Rate Sensitive', fontsize=10, color=COLORS['success'], fontweight='bold')
-    ax.text(80, -0.8, 'Rate Beneficiary →', fontsize=10, color=COLORS['highlight'], fontweight='bold')
+    ax.text(x_min * 0.5, -0.8, '← Rate Sensitive', fontsize=10, color=COLORS['success'], fontweight='bold')
+    ax.text(x_max * 0.5, -0.8, 'Rate Beneficiary →', fontsize=10, color=COLORS['highlight'], fontweight='bold')
     
     plt.tight_layout()
     plt.savefig('viz_uc5_rate_sensitivity.png', dpi=150, bbox_inches='tight')
@@ -399,6 +407,7 @@ def create_summary_dashboard():
     ax.barh(list(stats.keys()), [v/1000 for v in stats.values()], color=COLORS['primary'])
     ax.set_xlabel('Records (thousands)')
     ax.set_title('Database Size')
+    ax.set_xlim(0, max(stats.values())/1000 * 1.2)
     for i, (k, v) in enumerate(stats.items()):
         ax.text(v/1000 + 5, i, f'{v:,}', va='center', fontsize=9)
     
@@ -420,6 +429,7 @@ def create_summary_dashboard():
     ax.set_xlabel('Year')
     ax.set_ylabel('Companies with Data')
     ax.set_title('Financial Data Coverage')
+    ax.set_ylim(0, df['companies'].max() * 1.1)
     ax.tick_params(axis='x', rotation=45)
     
     # 4. Top 10 Concentration Trend
@@ -437,6 +447,7 @@ def create_summary_dashboard():
     ax.plot(df['year'], df['top10'], marker='s', color=COLORS['primary'])
     ax.set_ylabel('Top 10 Weight (%)')
     ax.set_title('FTSE 100 Concentration')
+    ax.set_ylim(0, max(60, df['top10'].max() * 1.2))
     ax.tick_params(axis='x', rotation=45)
     
     # 5. Interest Rates
@@ -450,6 +461,7 @@ def create_summary_dashboard():
     ax.plot(df['year'], df['rate'], marker='o', color=COLORS['accent'], linewidth=2)
     ax.set_ylabel('10Y Yield (%)')
     ax.set_title('US 10-Year Treasury Yield')
+    ax.set_ylim(0, max(5, df['rate'].max() * 1.2))
     ax.tick_params(axis='x', rotation=45)
     
     # 6. Macro Coverage
