@@ -7,5 +7,10 @@ macroalpha.db
 *.toc
 venv/
 
+# Report files
+report.tex
+report.pdf
+report_backup.tex
+
 # macOS system files
 .DS_Store
