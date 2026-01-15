@@ -1,0 +1,11 @@
+country_id,total_companies,zombie_count,zombie_pct,zombie_debt_bn,country_gdp_bn,zombie_debt_pct_gdp
+IS,1,1,100.0,0.0,,
+NE,2,1,50.0,0.0,,
+SZ,4,1,25.0,0.0,,
+GB,101,11,10.9,0.04,720972.0,0.0
+IR,14,1,7.1,0.0,,
+US,564,33,5.9,0.59,29298.0,0.0
+CL,1,0,0.0,0.0,,
+IN,1,0,0.0,0.0,,
+KZ,1,0,0.0,0.0,,
+MX,1,0,0.0,0.0,,

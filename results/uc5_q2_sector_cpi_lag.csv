@@ -1,0 +1,12 @@
+gics_sector_name,months,avg_return,avg_cpi_change,return_cpi_covariance,cpi_sensitivity
+Financials,239,0.2264,0.0038,0.055924,Positive (Inflation Beneficiary)
+Consumer Staples,239,1.0393,0.0038,0.008576,Positive (Inflation Beneficiary)
+Real Estate,239,1.3898,0.0038,0.007169,Positive (Inflation Beneficiary)
+Materials,239,0.7668,0.0038,0.002347,Positive (Inflation Beneficiary)
+Industrials,239,1.2411,0.0038,-0.01458,Negative (Inflation Sensitive)
+Utilities,239,1.8611,0.0038,-0.017761,Negative (Inflation Sensitive)
+Consumer Discretionary,239,0.8975,0.0038,-0.018028,Negative (Inflation Sensitive)
+Energy,239,0.7141,0.0038,-0.031292,Negative (Inflation Sensitive)
+Communication Services,239,0.1171,0.0038,-0.038767,Negative (Inflation Sensitive)
+Health Care,239,1.5323,0.0038,-0.045822,Negative (Inflation Sensitive)
+Information Technology,239,1.5539,0.0038,-0.046008,Negative (Inflation Sensitive)

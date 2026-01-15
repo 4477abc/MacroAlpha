@@ -1,0 +1,12 @@
+gics_sector_name,weeks,avg_weekly_return,avg_yield_change_bp,rate_sensitivity,rate_profile
+Utilities,1042,0.4403,0.0003,-0.007307,Rate Sensitive (Duration Risk)
+Consumer Staples,1042,0.2445,0.0003,0.025564,Rate Beneficiary
+Health Care,1042,0.3587,0.0003,0.040826,Rate Beneficiary
+Real Estate,1042,0.3182,0.0003,0.044653,Rate Beneficiary
+Communication Services,1042,0.0251,0.0003,0.08195,Rate Beneficiary
+Consumer Discretionary,1042,0.2012,0.0003,0.090081,Rate Beneficiary
+Information Technology,1042,0.346,0.0003,0.092083,Rate Beneficiary
+Industrials,1042,0.2816,0.0003,0.096909,Rate Beneficiary
+Materials,1042,0.1712,0.0003,0.108891,Rate Beneficiary
+Financials,1042,0.0433,0.0003,0.115064,Rate Beneficiary
+Energy,1042,0.1662,0.0003,0.154186,Rate Beneficiary
